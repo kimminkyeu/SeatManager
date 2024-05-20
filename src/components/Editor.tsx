@@ -81,6 +81,9 @@ function Editor(): ReactElement {
     // 이건 기존 원본.
     const editingSectorRef = useRef<Sector | null>(null);
 
+    const exportToCustomFormat = (): any => {
+        Assert.Never("아직 미구현된 기능입니다.");
+    }
 
     // --------------------------------------------------------------------
     const createPreviewHtml = (): string => {
@@ -127,8 +130,6 @@ function Editor(): ReactElement {
             }
         });
         html += "</svg>";
-
-        // console.log(html);
         return html;
     }
 
