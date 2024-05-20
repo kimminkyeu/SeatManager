@@ -1,14 +1,14 @@
 import { fabric } from "fabric";
 import { v4 as uuidv4 } from "uuid";
 
-import { FabricObjectWithId } from "@/types/canvas.type";
+// import { FabricObjectWithId } from "@/types/canvas.type";
 import { bringElementTo, createShape } from "./shapes";
 import _ from "lodash";
 import { COLORS, TOOL_ELEMENT_DEFAULT } from "@/constants";
 import { Sector } from "@/types/sector.type";
 import { Assert } from "./assert";
 import { ObjectType, ObjectUtil } from "./type-check";
-import { createSeat } from "./seat";
+// import { createSeat } from "./seat";
 
 export const handleSelectAll = (canvas: fabric.Canvas) => {
     canvas.discardActiveObject();
@@ -95,6 +95,8 @@ export const handleCopy = (canvas: fabric.Canvas) => {
         const serializedObjects = activeObjects.map((obj) => {
             return obj.toObject(); // 이 친구는 객체의 함수들이 다 제외된다....
         });
+
+        // console.log("serializedObjects", serializedObjects);
         // Store the serialized objects in the clipboard
         const string = JSON.stringify(serializedObjects);
         localStorage.setItem("fabric-clipboard", string);
@@ -132,26 +134,31 @@ export const handlePaste = (
                             switch (ObjectUtil.getType(obj)) {
 
                                 case (ObjectType.SECTOR):
+                                    // console.log(obj);
                                     const casted = (obj as Sector);
                                     objects.push(new Sector(
-                                        ObjectType.FABRIC_CIRCLE,
+                                        casted.baseShape,
                                         "NULL",
-                                        casted.seatCount.row,
-                                        casted.seatCount.col,
-                                        casted.gap.x,
-                                        casted.gap.y,
+                                        casted.editorObjectData.rows,
+                                        casted.editorObjectData.cols,
+                                        casted.editorObjectData.gapX,
+                                        casted.editorObjectData.gapY,
                                         {
-                                            left: (obj.left) ? (obj.left + offset) : (canvas.getCenter().left),
-                                            top: (obj.top) ? (obj.top + offset) : (canvas.getCenter().top),
-                                            fill: obj.fill,
-                                            angle: obj.angle,
+                                            left: (casted.left) ? (casted.left + offset) : (canvas.getCenter().left),
+                                            top: (casted.top) ? (casted.top + offset) : (canvas.getCenter().top),
+                                            fill: casted.fill,
+                                            angle: casted.angle,
                                         }
                                     ));
                                     break;
 
+                                case (ObjectType.SEAT):
+                                    Assert.Never("아직 미구현된 기능입니다.");
+                                    break;
+
                                 case (ObjectType.FABRIC_GROUP):
                                     const group = (obj as fabric.Group);
-                                    group.forEachObject((obj: FabricObjectWithId<any>) => {
+                                    group.forEachObject((obj: any) => {
                                         obj.objectId = uuidv4(); // set child item's object id
                                     });
                                     obj.set({
@@ -159,7 +166,7 @@ export const handlePaste = (
                                         top: (obj.top) ? (obj.top + offset) : (canvas.getCenter().top),
                                         hasControls: false,
                                         objectId: uuidv4(),
-                                    } as FabricObjectWithId<any>);
+                                    } as any);
                                     objects.push(obj);
                                     break;
 
@@ -169,7 +176,7 @@ export const handlePaste = (
                                         top: (obj.top) ? (obj.top + offset) : (canvas.getCenter().top),
                                         hasControls: false,
                                         objectId: uuidv4(),
-                                    } as FabricObjectWithId<any>);
+                                    } as any);
                                     objects.push(obj);
                                     break;
                             } // ---------------------------- end of switch-case
@@ -198,7 +205,7 @@ export const handleDelete = (
     }
 
     if (activeObjects.length > 0) {
-        activeObjects.forEach((obj: FabricObjectWithId<any>) => {
+        activeObjects.forEach((obj: any) => {
 
             // 그룹은 objectId가 없기 때문에...
             // if (!obj.objectId) {

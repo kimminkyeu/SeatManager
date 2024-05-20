@@ -1,4 +1,3 @@
-// export type ShapeType = "rect" | "triangle" | "circle" | "i-text" | "image";
 
 export const TOOL_VALUE = {
   panning: "panning",
@@ -21,33 +20,31 @@ interface ShapeSize {
   }
 }
 
+export const EDITMODE_BACKGROUND_COLOR: string = "#d9d9d9";
+export const DEFAULT_BACKGROUND_COLOR: string = "#F2F2F2";
+
+export const GRID_COLOR: string = "#c2c2c2";
+
 export const PREVIEW_OPACITY: number = 0.3;
 
-export const SEAT_WIDTH = 50;
-export const SEAT_HEIGHT = 50;
+export const SEAT_WIDTH = 40;
+export const SEAT_HEIGHT = 40;
 
 export const SHAPE_SIZE : ShapeSize = {
   circle: {
     radius: {
-      default: 25
+      default: 20
     }
   }
 }
 
-interface SystemColors {
-  object: {
-    default: string
-    // selected: string
-  },
-  text: {
-    default: string
-  }
-}
+export const COLORS = {
+  venue: {
+    default: "#000000",
 
-export const COLORS : SystemColors = 
-{
+  },
   object: {
-    default: "#F7D631",
+    default: "#83c3b8",
     // selected: "#FFAA00",
   },
   text : {

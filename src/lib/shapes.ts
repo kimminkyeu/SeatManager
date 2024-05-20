@@ -2,16 +2,16 @@ import { fabric } from "fabric";
 import { v4 as uuidv4 } from "uuid";
 
 import {
-  FabricObjectWithId,
   ElementDirection,
   ImageUpload,
   ModifyShape,
 } from "@/types/canvas.type";
 import { PREVIEW_OPACITY, COLORS, SHAPE_SIZE, TOOL_VALUE } from "@/constants";
 import { Assert } from "./assert";
-import { ICircleOptions, IRectOptions, ITextOptions } from "fabric/fabric-impl";
-import { EditorObject, Sector, SectorEditingAttribute } from "@/types/sector.type";
+import { ICircleOptions, IObjectOptions, IRectOptions, ITextOptions } from "fabric/fabric-impl";
+import { Sector, SectorEditingAttribute } from "@/types/sector.type";
 import { ObjectType, ObjectUtil } from "./type-check";
+import { Seat } from "@/types/seat.type";
 
 export const createCircle = (
   pointer?: PointerEvent, 
@@ -21,14 +21,14 @@ export const createCircle = (
     radius: SHAPE_SIZE.circle.radius.default,
     left: pointer?.x,
     top: pointer?.y,
-    fill: COLORS.object.default,
+    // fill: COLORS.object.default,
     opacity: option?.opacity ?? 1,
-    originX: 'center',
-    originY: 'center',
+    // originX: 'center',
+    // originY: 'center',
     hasControls: false,
     objectId: uuidv4(),
     ...option,
-  } as FabricObjectWithId<fabric.Circle>);
+  } as any);
 
   return circle;
 };
@@ -43,10 +43,10 @@ export const createRectangle = (
     opacity: option?.opacity ?? 1,
     width: option?.width ?? 100, // default size is 100
     height: option?.height ?? 100,
-    fill: COLORS.object.default,
+    // fill: COLORS.object.default,
     objectId: uuidv4(),
     ...option,
-  } as FabricObjectWithId<fabric.Rect>);
+  } as any);
 
   return rect;
 };
@@ -69,25 +69,25 @@ export const createText = (
   } as fabric.ITextOptions);
 };
 
-export function createShape (
+export function createShape<T> (
   shapeType: string,
   pointer?: PointerEvent,
-  isPreview?: boolean
+  options?: IObjectOptions,
 ) {
-
-  const opacity = (isPreview ? PREVIEW_OPACITY : 1);
 
   switch (shapeType) {
 
-    case TOOL_VALUE.circle:
-      return createCircle(pointer, { opacity: opacity });
+    case ObjectType.FABRIC_CIRCLE:
+      return createCircle(pointer, options);
 
-    case TOOL_VALUE.text:
-      return createText("double click to type...", pointer, { opacity: opacity });
+    case ObjectType.FABRIC_TEXT:
+      return createText("double click to type...", pointer, options);
+
+    case ObjectType.FABRIC_RECT:
+      return createRectangle(pointer, options);
   
     default:
-      Assert.Never("shape이 아닌 것이 생성할 수 없습니다!");
-      return null;
+      Assert.Never(`지원하지 않는 Shape입니다: ${shapeType}`);
   }
 };
 
@@ -155,14 +155,12 @@ export const modifyObject = ({
         Assert.True(selectedElement instanceof Sector);
         const sector = (selectedElement as Sector);
         modifyShapeInternal(sector, property, value);
-        sector.getSeats().forEach((seat) => {
-          modifyShapeInternal(seat, property, value);
-        })
         break;
 
       case (ObjectType.SEAT):
-        Assert.Never("아직 미구현된 기능입니다. 현재 Seat은 일반 객체입니다.")
-        // TODO: implement seat object?
+        Assert.True(selectedElement instanceof Seat);
+        const seat = (selectedElement as Seat);
+        modifyShapeInternal(seat, property, value);
         break;
 
       case (ObjectType.FABRIC_GROUP):

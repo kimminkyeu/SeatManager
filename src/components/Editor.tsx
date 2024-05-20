@@ -6,13 +6,20 @@ import { Canvas } from "@/components/Canvas";
 import { PropertyPanel } from "@/components/property_panel/PropertyPanel";
 import { EditingAttribute, ShapeEditingAttribute, ToolElement } from "@/types/canvas.type";
 import { Navbar } from "@/components/Navbar";
-import { TOOL_ELEMENT_PANNING, TOOL_ELEMENT_SELECT, TOOL_ELEMENT_TEXT, TOOL_ELEMENT_DEFAULT, TOOL_VALUE, TOOL_ELEMENT_SECTOR, SEAT_WIDTH, SEAT_HEIGHT, } from "@/constants";
+import { TOOL_ELEMENT_PANNING, TOOL_ELEMENT_SELECT, TOOL_ELEMENT_TEXT, TOOL_ELEMENT_DEFAULT, TOOL_VALUE, TOOL_ELEMENT_SECTOR, SEAT_WIDTH, SEAT_HEIGHT, PREVIEW_OPACITY, COLORS, GRID_COLOR, DEFAULT_BACKGROUND_COLOR, EDITMODE_BACKGROUND_COLOR, } from "@/constants";
 import { createShape, handleImageUpload } from "@/lib/shapes";
 import { handleDelete, groupActiveSelection, handleKeyDown, ungroupActiveSelection } from "@/lib/key-events";
 import { undo, redo } from "@/lib/history";
 import { Assert } from "@/lib/assert";
-import { createSector } from "@/lib/sector";
 import { useImmer } from "use-immer";
+import { ObjectType, ObjectUtil } from "@/lib/type-check";
+import { Sector } from "@/types/sector.type";
+import { EditorObject, ExportAdjustment } from "@/types/editorObject.type";
+
+import "@/preview.script";
+import { Venue } from "@/types/venue.type";
+import { Seat } from "@/types/seat.type";
+import _ from "lodash";
 
 // TODO: Panning + zoom 하면 마우스 포인터 이상해지는 문제 해결하기
 // TODO: Sector는 외곽선 색 + section text 표기를 같이 보여주자.
@@ -32,7 +39,7 @@ function Editor(): ReactElement {
     const previewSeatShapeRef = useRef<fabric.Object | null>(null);
 
     const gridCanvasRef = useRef<fabric.StaticCanvas | null>(null);
-    const [isGridViewOn, setIsGridViewOn] = useState<boolean>(true);
+    const [isGridViewOn, setIsGridViewOn] = useState<boolean>(false);
 
     // 라벨, 좌석 번호등의 시각화를 위한 캔버스
     // const dataCanvasRef = useRef<fabric.StaticCanvas | null>(null);
@@ -57,10 +64,75 @@ function Editor(): ReactElement {
     // 키보드 이벤트를 임시로 막을 때 사용할 변수
     const keyboardEventDisableRef = useRef<boolean>(false);
 
-    // 섹터 편집 / 일반 그룹 편집 / 일반 단일 도형 편집시 오른쪽 패널 전환을 위한 도구
-    // EditingElementAttributes is an object that contains the attributes of the selected element in the canvas.
-    const [editingElementAttributes, setEditingElementAttributes] = useImmer<EditingAttribute | null>(null);
+    // 섹터 편집 / 일반 그룹 편집 / 일반 단일 도형 편집시 오른쪽 패널 전환 + 변경 시 객체에도 반영되기 위한 State
+    const [editingElementUiAttributes, setEditingElementUiAttributes] = useImmer<EditingAttribute | null>(null);
 
+    // 상세 편집 버튼을 현재 선택 오브젝트 상태에 따라 비활성화 하기 위한 State
+    const [IsEditButtonClickableUiState, setIsEditButtonClickableUiState] = useImmer<boolean>(false);
+    // 현재 상세 편집중일 경우 텍스트 내용을 변경하기 위한 State
+    const [isInEditModeUiState, setIsEditModeUiState] = useImmer<boolean>(false);
+
+    const isEditingModeRef = useRef<boolean>(false);
+
+    const venueObjectRef = useRef<Venue | null>(null);
+
+    // 편집 모드에서 현재 섹터와 연관된 Seat들을 저장하는 곳. 편집 모드를 끄면 Sector로 재구성하기 위함.
+    const editingSeatsRef = useRef< Map<string, Seat> | null>(null);
+    // 이건 기존 원본.
+    const editingSectorRef = useRef<Sector | null>(null);
+
+
+    // --------------------------------------------------------------------
+    const createPreviewHtml = (): string => {
+
+        const fabricCanvas = fabricCanvasRef.current;
+        Assert.NonNull(fabricCanvasRef, "fabricCanvas 객체가 없습니다!");;
+        const venue = venueObjectRef.current;
+        Assert.NonNull(venue, "Venue 객체가 없습니다!");;
+
+        // 렌더링될 div의 크기, 시작 지점 기준은 venue의 위치로 정한다.
+        const _w = venue.width;
+        const _h = venue.height;
+        const _l = venue.left;
+        const _t = venue.top;
+        const adjustment: ExportAdjustment = {
+            leftStart: _l,
+            topStart: _t,
+        }
+
+        let html: string = "";
+        html += `<svg style=\"
+            width:${_w}px; height:${_h}px; 
+            border: 2px dashed;
+        \">
+        `;
+        fabricCanvas?.forEachObject((object: fabric.Object) => {
+            const type = ObjectUtil.getType(object);
+            // VENUE는 제외합니다.
+            if ((ObjectType.SEAT === type) || (ObjectType.SECTOR === type)) {
+                html += (object as EditorObject).toHTML(adjustment);
+            }
+            if (ObjectType.FABRIC_IMAGE === type) {
+
+                // center 기준 위치 조정.
+                const adjustedLeft = (object.left) ? (object.left - (adjustment.leftStart ?? 0)) : object.left;
+                const adjustedTop = (object.top) ? (object.top - (adjustment.topStart ?? 0)) : object.top;
+                // toSVG 위치 조정용.
+                const img = (object as fabric.Image);
+                const prevLeft = img.left;
+                const prevTop = img.top;
+                img.setOptions({left: adjustedLeft, top: adjustedTop});
+                html += img.toSVG();
+                img.setOptions({left: prevLeft, top: prevTop});
+            }
+        });
+        html += "</svg>";
+
+        // console.log(html);
+        return html;
+    }
+
+    // --------------------------------------------------------------------
     const setObjectSelectable = (canvas: fabric.Canvas, _selectable: boolean) => {
         if (true === _selectable) {
             canvas.hoverCursor = "hover";
@@ -74,13 +146,124 @@ function Editor(): ReactElement {
     }
 
     const toggleGridView = () => {
-        setIsGridViewOn((prev) => !prev);
+        return setIsGridViewOn(prev => !prev);
     }
+
+    const toggleEditingMode = () => {
+
+        const canvas = fabricCanvasRef.current;
+        Assert.NonNull(canvas);
+
+        // toogle boolean ref
+        isEditingModeRef.current = !isEditingModeRef.current;
+
+        const isEditingMode = (true === isEditingModeRef.current);
+
+        // isEditingModeRef 변화에 따라 UI 변경.
+        setIsGridViewOn(!isEditingMode); 
+        setIsEditModeUiState(isEditingMode); 
+        
+        // change background color if editing mode is on.
+        const bg = (true === isEditingModeRef.current)
+            ? (EDITMODE_BACKGROUND_COLOR)
+            : (DEFAULT_BACKGROUND_COLOR);
+        canvas.backgroundColor = bg;
+        canvas.requestRenderAll();
+
+
+        /**
+         * 모든 오브젝트에 대해서...
+         * 
+         * 편집 대상이 아닌 모든 물체 = Opacity 작게 하거나 0으로 만들고, control 못하게 막기 
+         * 참고: Lock @link http://fabricjs.com/fabric-intro-part-4
+         * 
+         * 편집 대상 섹터 = 편집용 객체로 변환
+         * 그룹 해제 해서 각각 편집하고 삭제 가능.
+         * 
+         */
     
+        // ---------------------------------------------------------
+        // 1. 현재 선택된 Sector가 아닌 그 외 모든 물체는 Lock한다.
+        let sector = canvas.getActiveObject() as (Sector | null);
+
+        canvas.forEachObject((obj: fabric.Object) => {
+            const type = ObjectUtil.getType(obj);
+            // Except selected sector.
+            if (ObjectType.SECTOR !== type) {
+                obj.set({
+                    selectable: (true === isEditingMode) ? (false) : (true),
+                    evented: (true === isEditingMode) ? (false) : (true),
+                    opacity: (true === isEditingMode) ? (0.35) : (1),
+                })
+            }
+            if (ObjectType.VENUE === type) {
+                (obj as Venue).visible = (true === isEditingMode) ? (false) : (true);
+            }
+        });
+        canvas.selection = (true === isEditingMode) ? (false) : (true);
+        canvas.discardActiveObject().renderAll();
+
+        // ---------------------------------------------------------
+        // 2. 편집 모드 활성화라면, 현재 선택된 Sector를 해체한다.
+        if (true === isEditingMode) {
+            Assert.NonNull(sector);
+            Assert.True(
+                (ObjectType.SECTOR === ObjectUtil.getType(sector)),
+                "편집 대상 Object는 Sector여야 합니다."
+            );
+
+            editingSectorRef.current = sector;
+            editingSeatsRef.current = new Map<string, Seat>();
+
+            const selection = new fabric.ActiveSelection(undefined, { canvas: canvas });
+            canvas.remove(sector);
+            (sector.destroy() as Sector).getSeats().forEach((seat: Seat) => {
+                Assert.True(seat instanceof Seat);
+                const copiedSeat = seat.constructNewCopy();
+                canvas.add(copiedSeat);
+                selection.addWithUpdate(copiedSeat);
+                // 편집 모드 종료시 활용할 데이터.
+                editingSeatsRef.current?.set(copiedSeat.getObjectId(), copiedSeat);
+            });
+            canvas.setActiveObject(selection).requestRenderAll();
+            return;
+        }
+
+        // ---------------------------------------------------------
+        // 3. 편집 모드를 종료한다면, 현재 편집중인 모든 좌석들을 하나의 섹터로 재구성 한다.
+        if (false === isEditingMode) {
+            Assert.NonNull(editingSectorRef.current);
+            Assert.NonNull(editingSeatsRef.current);
+
+
+            const newSector = new Sector(
+                editingSectorRef.current.baseShape,
+                editingSectorRef.current.sectorId,
+            )
+            editingSeatsRef.current?.forEach((seat: Seat) => {
+                canvas.remove(seat);
+                newSector.addSeatWithUpdate(seat);
+            });
+            canvas.add(newSector);
+
+            // reset
+            editingSeatsRef.current.clear();
+            editingSeatsRef.current = null;
+            editingSectorRef.current = null;
+
+            // do others...
+            lastModifiedObjectRef.current = newSector;
+
+            // 섹터 재구성이 끝났다면, 이제 마무리.
+            canvas.discardActiveObject().requestRenderAll(); // 선택 초기화
+            setIsEditButtonClickableUiState(false); // 버튼 비활성화
+        }
+    }
+
     const setActiveEditorToolTo = (toolElem: ToolElement) => {
 
         console.log(`setActiveEditorToolTo( ${toolElem.value} )`);
-        
+
         Assert.NonNull(fabricCanvasRef.current);
         Assert.NonNull(previewCanvasRef.current);
         Assert.NonNull(gridCanvasRef.current);
@@ -98,6 +281,11 @@ function Editor(): ReactElement {
 
         // ---------------------------------------------------------------------
         switch (toolElem?.value) {
+
+            case TOOL_VALUE.select:
+                selectedToolValueRef.current = TOOL_VALUE.select;
+                setActiveToolUiState(TOOL_ELEMENT_SELECT); // re-render navbar
+                break;
   
             case TOOL_VALUE.image:
                 imageInputRef.current?.click(); // trigger the click event on the input element which opens the file dialog
@@ -126,12 +314,8 @@ function Editor(): ReactElement {
                 setActiveToolUiState(TOOL_ELEMENT_PANNING); // re-render navbar
                 break;
 
-            case TOOL_VALUE.select:
-                selectedToolValueRef.current = TOOL_VALUE.select;
-                setActiveToolUiState(TOOL_ELEMENT_SELECT); // re-render navbar
-                break;
-
             case TOOL_VALUE.sector: // 섹터 생성
+                fabricCanvasRef.current.discardActiveObject();
                 selectedToolValueRef.current = TOOL_VALUE.sector;
                 setObjectSelectable(fabricCanvasRef.current, false);
                 setActiveToolUiState(TOOL_ELEMENT_SECTOR); // re-render navbar
@@ -139,11 +323,13 @@ function Editor(): ReactElement {
 
             // ---- Tool: Single Object Creation (Text, Shape) -----------------------------
             default:
+                Assert.Never("현재 일반 객체 생성은 금지되어 있습니다. 개발중입니다.");
+
                 selectedToolValueRef.current = toolElem?.value as string;
                 setObjectSelectable(fabricCanvasRef.current, false);
 
                 // Create preview shape
-                const selectedPreviewShape = createShape(selectedToolValueRef.current, undefined, true);
+                const selectedPreviewShape = createShape(selectedToolValueRef.current, undefined, {opacity: PREVIEW_OPACITY});
                 if (selectedPreviewShape) {
                     previewCanvasRef.current.add(selectedPreviewShape);
                     previewSeatShapeRef.current = selectedPreviewShape;
@@ -155,13 +341,40 @@ function Editor(): ReactElement {
 
 
     useEffect(() => {
+        console.log("==== [ Canvas Re-rendered ] ===");
+
+        const INITIAL_ZOOM_VALUE = 1.0;
+        // const INITIAL_WIDTH = 3000;
+        // const INITIAL_HEIGHT = 3000;
         // -----------------------------------------------------------------------
         // init fabric canvas
         const fabricCanvas: fabric.Canvas = initializeFabric({
             htmlCanvasElementId: "fabric-canvas",
             canvasRef,
-            fabricRef: fabricCanvasRef
+            fabricRef: fabricCanvasRef,
         });
+        fabricCanvas.setZoom(INITIAL_ZOOM_VALUE);
+        // fabricCanvas.setDimensions({width:INITIAL_WIDTH, height:INITIAL_HEIGHT});
+
+        // Set default behavior of group
+        // fabric.Canvas.prototype.selection = false;
+        fabric.Group.prototype.set({
+            borderColor: '#ff00ff',
+            cornerColor: '#ff0000',
+            lockScalingX: true,
+            lockScalingY: true,
+        });
+        // fabric.Group.prototype.setControlsVisibility({
+        //     mtr: true, // show rotation
+        //     mt: false,
+        //     tr: false,
+        //     tl: false,
+        //     mb: false,
+        //     ml: false,
+        //     mr: false,
+        //     bl: false,
+        //     br: false
+        // })
 
         // -----------------------------------------------------------------------
         // init preview canvas
@@ -170,6 +383,8 @@ function Editor(): ReactElement {
             height: fabricCanvas.height,
             defaultCursor: "none",
         });
+        // previewCanvas.setDimensions({width:INITIAL_WIDTH, height:INITIAL_HEIGHT});
+        previewCanvas.setZoom(INITIAL_ZOOM_VALUE);
         previewCanvasRef.current = previewCanvas;
 
         // -----------------------------------------------------------------------
@@ -179,26 +394,17 @@ function Editor(): ReactElement {
             height: fabricCanvas.height,
             defaultCursor: "none",
         });
+        gridCanvas.setZoom(INITIAL_ZOOM_VALUE);
+        // gridCanvas.setDimensions({width:INITIAL_WIDTH, height:INITIAL_HEIGHT});
         gridCanvasRef.current = gridCanvas;
-        const gridUnitSize = 50;
+        const gridUnitSize = 30;
         const unitScale = 2;
         const gridMaxLength = gridCanvasRef.current.getWidth() * unitScale;
-        const gridColor = "#c2c2c2";
         const start = -(gridMaxLength / 4);
         for (let i = 0; i < (gridMaxLength / gridUnitSize) + 1; ++i) {
-            gridCanvasRef.current.add(new fabric.Line([start + i * gridUnitSize, start + 0, start + i * gridUnitSize, start + gridMaxLength], { type: 'line', stroke: gridColor, selectable: false }));
-            gridCanvasRef.current.add(new fabric.Line([start + 0, start + i * gridUnitSize, start + gridMaxLength, start + i * gridUnitSize], { type: 'line', stroke: gridColor, selectable: false }))
+            gridCanvasRef.current.add(new fabric.Line([start + i * gridUnitSize, start + 0, start + i * gridUnitSize, start + gridMaxLength], { strokeWidth:1, type: 'line', stroke: GRID_COLOR, selectable: false }));
+            gridCanvasRef.current.add(new fabric.Line([start + 0, start + i * gridUnitSize, start + gridMaxLength, start + i * gridUnitSize], { strokeWidth:1, type: 'line', stroke: GRID_COLOR, selectable: false }))
         }
-
-
-        // -----------------------------------------------------------------------
-        // // init data canvas
-        // const dataCanvas = new fabric.StaticCanvas("data-canvas", {
-        //     width: fabricCanvas.width,
-        //     height: fabricCanvas.height,
-        //     defaultCursor: "none",
-        // });
-        // dataCanvasRef.current = dataCanvas;
 
         // -----------------------------------------------------------------------
         // fabric default tool setting
@@ -207,45 +413,96 @@ function Editor(): ReactElement {
         selectedToolValueRef.current = TOOL_ELEMENT_DEFAULT.value as string;
 
         // -----------------------------------------------------------------------
-        // fabric canvas group selection setting
-        fabric.Group.prototype.lockScalingX = true;
-        fabric.Group.prototype.lockScalingY = true;
-        fabric.Group.prototype.setControlsVisibility({
-            mt: false,
-            tr: false,
-            tl: false,
-            mb: false,
-            ml: false,
-            mr: false,
-            bl: false,
-            br: false
-        })
+        // Create Venue Single Object (+ Disbale Copy-paste)
+        Assert.NonNull(fabricCanvasRef.current, "fabric canvas가 null일 수 없습니다.");
+        const venueWidth = fabricCanvasRef.current?.width;
+        Assert.NonNull(venueWidth, "fabric canvas와 width가 null일 수 없습니다.");
+        const venueHeight = fabricCanvasRef.current?.height;
+        Assert.NonNull(venueHeight, "fabric canvas와 height가 null일 수 없습니다.");
+
+        const venue = new Venue(
+            "공연장 1", 
+            venueWidth * 0.7,
+            venueHeight * 0.8,
+        )
+        fabricCanvasRef.current.add(venue);
+        fabricCanvasRef.current.centerObject(venue);
+        fabricCanvasRef.current.requestRenderAll();
+        venueObjectRef.current = venue;
 
         // -----------------------------------------------------------------
         fabricCanvas.on("selection:created", function (options: fabric.IEvent) {
             console.log(`fabric: [selection:created]`);
-            handleCanvasSelectionCreated({
+            handleCanvasSelectionUpdated({ // for editing Attribute
                 options,
-                setEditingElementAttributes,
+                setEditingElementUiAttributes,
             })
             setActiveEditorToolTo(TOOL_ELEMENT_DEFAULT);
             keyboardEventDisableRef.current = false;
+
+            // --------------------------------------------------
+            // Activate Editing Mode Button ui (if condition fulfilled)
+            const activeObjects = fabricCanvasRef.current?.getActiveObjects();
+
+            // 에디팅 모드일땐 버튼 항상 활성화
+            if (true === isEditingModeRef.current) {
+                setIsEditButtonClickableUiState(true);
+                return;
+            }
+
+            if ((false === isEditingModeRef.current) &&
+                (activeObjects) &&
+                (activeObjects?.length === 1)
+            ) {
+                const selectedElement = activeObjects[0];
+                const selectedType = ObjectUtil.getType(selectedElement);
+                const isEditable = ((selectedElement) && (ObjectType.SECTOR === selectedType));
+                setIsEditButtonClickableUiState(isEditable);
+                return;
+            }
         });
 
         fabricCanvas.on("selection:updated", function (options: fabric.IEvent) {
             console.log(`fabric: [selection:updated]`);
-            // console.dir(options.selected);
-            handleCanvasSelectionUpdated({
+            handleCanvasSelectionUpdated({ // for editing Attribute
                 options,
-                setEditingElementAttributes,
+                setEditingElementUiAttributes,
             })
             setActiveEditorToolTo(TOOL_ELEMENT_DEFAULT);
             keyboardEventDisableRef.current = false;
+
+            // --------------------------------------------------
+            // Activate Editing Mode Button ui (if condition fulfilled)
+            const activeObjects = fabricCanvasRef.current?.getActiveObjects();
+
+            // 에디팅 모드일땐 버튼 항상 활성화
+            if (true === isEditingModeRef.current) {
+                setIsEditButtonClickableUiState(true);
+                return;
+            }
+
+            if ((false === isEditingModeRef.current) &&
+                (activeObjects) &&
+                (activeObjects?.length === 1)
+            ) {
+                const selectedElement = activeObjects[0];
+                const selectedType = ObjectUtil.getType(selectedElement);
+                const isEditable = ((selectedElement) && (ObjectType.SECTOR === selectedType));
+                setIsEditButtonClickableUiState(isEditable);
+                return;
+            }
         })
 
         fabricCanvas.on("selection:cleared", function (options: fabric.IEvent) {
             console.log(`fabric: [selection:cleard]`);
-            setEditingElementAttributes(null);
+
+            setEditingElementUiAttributes(null);
+
+            // 현재 에디팅 모드일 경우엔 버튼을 비활성화해선 안된다.
+            if (false === isEditingModeRef.current) {
+                setIsEditButtonClickableUiState(false);
+            }
+
             keyboardEventDisableRef.current = false;
         });
 
@@ -253,18 +510,39 @@ function Editor(): ReactElement {
         // After event
         fabricCanvas.on("object:modified", (options) => {
             console.log("fabric: [object:modified]");
-            // storageManager.persist(options.target); // update object to storage
+            const target = options.target as fabric.Object;
+            if (ObjectUtil.isEditorObject(target)) {
+                (target as EditorObject).onUpdate();
+            }
         });
 
         fabricCanvas.on("object:added", (options) => {
             console.log("fabric: [object:added]");
-            // storageManager.persist(options.target); // update object to storage
         });
 
         fabricCanvas.on("object:removed", (options) => {
             console.log("fabric: [object:removed]");
-            // storageManager.persist(options.target); // update object to storage
+            /**
+             * @note 섹터 편집 모드에서 좌석이 삭제될 경우, 복구시 싱크를 맞춰야 한다.
+             */
+            if (true === isEditingModeRef.current) {
+                const removed = options.target as EditorObject;
+                Assert.NonNull(
+                    editingSeatsRef.current,
+                    "편집모드 중에는 editingSeatsRef가 반드시 존재해야 합니다!"
+                );
+                editingSeatsRef.current.delete(removed.getObjectId());
+            }
         });
+
+        fabricCanvas.on("object:rotating", (options) => {
+            console.log("fabric: [object:rotating");
+            // 내부 글자의 Angle을 회전시키기 위함.
+            const target = options.target as fabric.Object;
+            if (ObjectUtil.isEditorObject(target)) {
+                (target as EditorObject).onRotate();
+            }
+        })
 
         // -----------------------------------------------------------------
         // On-Going event
@@ -272,8 +550,12 @@ function Editor(): ReactElement {
             console.log("fabric: [object:scaling]");
             handleCanvasObjectScaling({
                 options,
-                setEditingElementAttributes,
+                setEditingElementUiAttributes,
             });
+            const target = options.target as fabric.Object;
+            if (ObjectUtil.isEditorObject(target)) {
+                (target as EditorObject).onScale();
+            }
         });
 
         fabricCanvas.on("object:moving", (options) => {}); 
@@ -322,13 +604,13 @@ function Editor(): ReactElement {
                         const width = pointer.x - lastMousePointerRef.current.x;
                         const height = pointer.y - lastMousePointerRef.current.y;
                         previewSector.item(0).set({ width: width, height: height });
-                        previewSector.set({ width: width, height: height });
 
                         // 2. change section hint Text (Row*Col)
                         const rowCount = Math.ceil(width / SEAT_WIDTH);
                         const colCount = Math.ceil(height / SEAT_HEIGHT);
                         (previewSector.item(1) as any).set("text", `${rowCount}×${colCount}`);
 
+                        previewSector.set({ width: width, height: height });
                         previewCanvasRef.current?.requestRenderAll();
                     }
                     break; // ----------------------------------------------------------
@@ -380,19 +662,42 @@ function Editor(): ReactElement {
                     /*
                      * create REAL sector object on Mouse Up.
                      */
-                    const sector = createSector(TOOL_VALUE.circle, lastMousePointerRef.current, pointer, false);
+                    const startPos = lastMousePointerRef.current;
+                    const endPos = pointer;
+                    const width = endPos.x - startPos.x;
+                    const height = endPos.y - startPos.y;
+                    const seatColCount = Math.ceil(width / SEAT_WIDTH);
+                    const seatRowCount = Math.ceil(height / SEAT_HEIGHT);
+
+                    if ((seatRowCount < 1) && (seatColCount < 1)) {
+                        alert("sector는 좌석 1개 이상부터 배치부터 생성 가능합니다.")
+                        setActiveEditorToolTo(TOOL_ELEMENT_DEFAULT);
+                        return null;
+                    }
+
+                    const sector = new Sector(
+                        ObjectType.FABRIC_CIRCLE,
+                        "NULL",
+                        seatRowCount,
+                        seatColCount,
+                        0,
+                        0,
+                        {
+                            left: startPos.x,
+                            top: startPos.y,
+                            fill: COLORS.object.default,
+                        }
+                    );
 
                     isSectorCreatingRef.current = false; // turn off sector creating mode.
                     previewSeatShapeRef.current = null; // unset preview shape ref
                     previewCanvasRef.current?.clear(); // remove current preview shape from preview-canvas
                     setActiveEditorToolTo(TOOL_ELEMENT_DEFAULT); // 도구 초기화
 
-                    if (sector) {
-                        lastModifiedObjectRef.current = sector; // record last modified object for further use...
-                        fabricCanvasRef.current.add(sector).requestRenderAll();
-                        fabricCanvasRef.current.setActiveObject(sector); // 강제 선택
-                        sector.setCoords();
-                    }
+                    lastModifiedObjectRef.current = sector; // record last modified object for further use...
+                    fabricCanvasRef.current.add(sector).requestRenderAll();
+                    fabricCanvasRef.current.setActiveObject(sector); // 강제 선택
+                    sector.setCoords();
                     break; // -------------------------------------------------------------
 
                 default:
@@ -486,12 +791,15 @@ function Editor(): ReactElement {
 
     return (
         <>
-            <div className=' flex flex-col w-full h-[100vh]'  > 
+            <div className=' flex flex-col w-full h-[100vh]'  >
                 <Navbar
                     activeToolUiState={activeToolUiState}
+                    IsEditButtonClickableUiState={IsEditButtonClickableUiState}
+                    toggleEditingMode={toggleEditingMode}
                     setActiveEditorToolTo={setActiveEditorToolTo}
                     imageInputRef={imageInputRef}
                     toggleGridView={toggleGridView}
+                    isGridViewOn={isGridViewOn}
                     handleImageUpload={(e: any) => {
                         e.stopPropagation(); // prevent the default behavior of the input element
 
@@ -500,33 +808,32 @@ function Editor(): ReactElement {
                             canvas: fabricCanvasRef as any,
                         });
                     }}
+                    isInEditModeUiState={isInEditModeUiState}
                 />
                 <section className='flex flex-row w-full h-full justify-between'>
                     <div className="relative w-full h-full ">
                         <Canvas
                             id="fabric-canvas"
-                            className=" w-full h-full "
+                            className=" w-full h-full z-10"
                             ref={canvasRef}
                         />
                         <canvas
                             id="preview-canvas"
-                            className=" pointer-events-none absolute top-0 left-0 right-0"
+                            className=" pointer-events-none absolute top-0 left-0 right-0 z-10"
                         />
                         <canvas
                             hidden={(false === isGridViewOn)}
                             id="grid-canvas"
-                            className=" pointer-events-none absolute top-0 left-0 right-0"
+                            className=" pointer-events-none absolute top-0 left-0 right-0 z-0"
                         />
-                        {/* <canvas
-                            id="data-canvas"
-                            className=" pointer-events-none absolute top-0 left-0 right-0"
-                        /> */}
                     </div>
                     <PropertyPanel
-                        editingElementAttributes={editingElementAttributes}
-                        setEditingElementAttributes={setEditingElementAttributes}
+                        editingElementUiAttributes={editingElementUiAttributes}
+                        setEditingElementUiAttributes={setEditingElementUiAttributes}
                         fabricRef={fabricCanvasRef}
                         keyboardEventDisableRef={keyboardEventDisableRef}
+                        createHtmlPreview={createPreviewHtml}
+                        exportToCustomFormat={exportToCustomFormat}
                     />
                 </section>
             </div>

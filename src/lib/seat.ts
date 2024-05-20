@@ -4,22 +4,27 @@ import { COLORS, PREVIEW_OPACITY, SEAT_HEIGHT, SEAT_WIDTH } from "@/constants";
 import { ModifyShape } from "@/types/canvas.type";
 import { Assert } from "./assert";
 import { v4 as uuidv4 } from 'uuid';
-import { Seat, SeatData } from "@/types/seat.type";
+// import { Seat } from "@/types/seat.type";
+// import { IObjectOptions } from "fabric/fabric-impl";
 
-export const createSeat = (
-    shapeType: string,
-    pointer?: PointerEvent,
-    isPreview?: boolean,
-    initialSeatData?: SeatData
-): Seat<any> => {
+// /**
+//  * @deprecated Seat 클래스 사용하는 것으로 변경합니다.
+//  */
+// export const createSeat = (
+//     shapeType: string,
+//     pointer?: PointerEvent,
+//     seatRowNum?: number,
+//     seatColNum?: number,
+//     options?: IObjectOptions,
+// ): Seat => {
 
-    const seat = createShape(shapeType, pointer, isPreview) as unknown as Seat<any>;
+//     const seat = createShape(shapeType, pointer, options) as unknown as Seat;
 
-    seat.seatRow = initialSeatData?.seatRow;
-    seat.seatCol = initialSeatData?.seatCol;
+//     seat.seatRow = seatRowNum;
+//     seat.seatCol = seatColNum;
 
-    return seat;
-}
+//     return seat;
+// }
 
 export const modifyCanvasObject = ({
     canvas,

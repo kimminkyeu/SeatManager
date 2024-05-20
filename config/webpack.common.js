@@ -24,11 +24,21 @@ module.exports = {
         use: {
           loader: 'file-loader',
           options: {
-            publicPath: './', // 브라우저 시작경로
+            publicPath: '/', // 브라우저 시작경로
             name: '[name].[contenthash].[ext]',
           },
         },
       },
+      {
+        test: /\.(script)$/i,
+        use: {
+          loader: 'file-loader',
+          options: {
+            publicPath: '/',
+            name: 'preview.script'
+          }
+        }
+      }
     ],
   },
   // watch: NODE_ENV === 'prod',

@@ -14,14 +14,14 @@ const SeatDataOptions
   ];
 
 type Props = {
-  editingElementAttributes: (SeatEditingAttributes);
+  editingElementUiAttributes: (SeatEditingAttributes);
   handleInputChange: (property: string, value: string | number) => void;
   keyboardEventDisableRef: React.MutableRefObject<boolean>;
   fabricRef: React.RefObject<fabric.Canvas | null>;
 };
 
 const SeatData = ({
-  editingElementAttributes,
+  editingElementUiAttributes,
   handleInputChange,
   keyboardEventDisableRef,
   // fabricRef,
@@ -29,10 +29,10 @@ const SeatData = ({
 
   const getInitialInputValue = (attributeProperty: keyof SeatEditingAttributes) => {
     const UNDEFINED = "";
-    if ( !editingElementAttributes ) {
+    if ( !editingElementUiAttributes ) {
       return UNDEFINED;
     }
-    const propertyValue = editingElementAttributes[attributeProperty];
+    const propertyValue = editingElementUiAttributes[attributeProperty];
     if ( !propertyValue ) {
       return UNDEFINED;
     }
@@ -47,7 +47,7 @@ const SeatData = ({
             key={item.label}
             className='flex flex-1 items-center gap-2 rounded-sm'
           >
-            <Label htmlFor={item.property} className=' text-[12px] min-w-12'>
+            <Label htmlFor={item.label} className=' text-[12px] min-w-12'>
               {item.label}
             </Label>
             <Input

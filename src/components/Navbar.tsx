@@ -1,18 +1,39 @@
-import { ToolElementsInNavbar } from "@/constants";
+import { TOOL_VALUE, ToolElementsInNavbar } from "@/constants";
 import { ToolElement } from "@/types/canvas.type";
 import { Image } from "@/common-ui/Image";
 import { TooltipButton } from "@/common-ui/TooltipButton";
 import { Checkbox } from "@/common-ui/ui/checkbox";
+import { Separator } from "@/common-ui/ui/separator"
+import { Toggle } from "@/common-ui/ui/toggle";
+import { Bold } from "lucide-react"
 
-export type NavbarProps = {
-    activeToolUiState: ToolElement | null;
-    imageInputRef: React.MutableRefObject<HTMLInputElement | null>;
+
+export type NavbarProps = { 
     handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    imageInputRef: React.MutableRefObject<HTMLInputElement | null>;
+
     setActiveEditorToolTo: (element: ToolElement) => void;
+    activeToolUiState: ToolElement | null;
+
     toggleGridView: () => void;
+    isGridViewOn: boolean,
+
+    toggleEditingMode: () => void;
+    IsEditButtonClickableUiState: boolean
+    isInEditModeUiState: boolean
 };
 
-function Navbar({ activeToolUiState, imageInputRef, handleImageUpload, setActiveEditorToolTo, toggleGridView }: NavbarProps) {
+function Navbar({ 
+    activeToolUiState, 
+    imageInputRef, 
+    handleImageUpload, 
+    setActiveEditorToolTo, 
+    toggleGridView, 
+    isGridViewOn,
+    IsEditButtonClickableUiState,
+    toggleEditingMode,
+    isInEditModeUiState,
+}: NavbarProps) {
 
     const isActive = (value: string | Array<ToolElement>) =>
         (activeToolUiState && activeToolUiState.value === value) ||
@@ -20,7 +41,7 @@ function Navbar({ activeToolUiState, imageInputRef, handleImageUpload, setActive
 
     return (
         <>
-            <ul className=" flex flex-row p-3 gap-3 justify-center border-b text-gray-900">
+            <ul className=" z-30 flex flex-row p-3 gap-3 justify-center border-b text-gray-900">
                 {
                     ToolElementsInNavbar.map((item: ToolElement | any) => (
                         <li
@@ -56,8 +77,9 @@ function Navbar({ activeToolUiState, imageInputRef, handleImageUpload, setActive
                         </li>
                     ))
                 }
-                <div className=" border-l-2 border-gray-300 px-6 flex items-center space-x-2">
-                    <Checkbox id="show-grid" defaultChecked onCheckedChange={toggleGridView}/>
+                <Separator orientation="vertical" />
+                <div className="px-6 flex items-center space-x-2">
+                    <Checkbox id="show-grid" checked={isGridViewOn} onClick={toggleGridView}/>
                     <label
                         htmlFor="show-grid"
                         className="prose-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -65,7 +87,25 @@ function Navbar({ activeToolUiState, imageInputRef, handleImageUpload, setActive
                         Grid
                     </label>
                 </div>
+                <Separator orientation="vertical" />
+                <div className='px-6 flex items-center'>
+                    <TooltipButton
+                        onClick={toggleEditingMode}
+                        tooltip={"Edit Section"}
+                        variant={"default"}
+                        disabled={false === IsEditButtonClickableUiState}
+                    >
+                        {
+                            (false === isInEditModeUiState) ? (
+                                `Start Edit`
+                            ) : (
+                                `Quit Edit`
+                            )
+                        }
+                    </TooltipButton>
+                </div>
             </ul>
+
             {/* for image upload */}
             <input
                 type="file"

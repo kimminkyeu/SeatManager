@@ -1,15 +1,23 @@
-import { Button } from "@/common-ui/Button";
+import { Button } from "@/common-ui/ui/button";
 import { Checkbox } from "@/common-ui/ui/checkbox";
 
-const Export = () => (
-  <div className='flex flex-col gap-3 px-5 py-5 border-b'>
-    <h3 className='text-[10px] uppercase'>Export</h3>
+
+interface ExportProps {
+  handleExport: Function;
+}
+
+const Export = ({
+  handleExport,
+}: ExportProps
+) => (
+  <div className='flex flex-col gap-3 px-5 py-2'>
+    <h3>Export</h3>
     <Button
       variant='outline'
-      className='w-full border border-primary-grey-100 hover:bg-primary-green hover:text-primary-black'
-      onClick={() => alert("export")}
+      className='w-full'
+      onClick={() => handleExport()}
     >
-      Export to JSON
+      Export Map
     </Button>
   </div>
 );

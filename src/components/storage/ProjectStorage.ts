@@ -7,8 +7,6 @@
 
 // https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API/Using_the_Web_Storage_API
 
-import { v4 as uuidv4 } from 'uuid';
-
 export namespace TW {
 
     interface Persistable {

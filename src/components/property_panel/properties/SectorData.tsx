@@ -1,5 +1,6 @@
 import { Label } from "@/common-ui/Label";
 import { Input } from "@/common-ui/ui/input";
+import { Separator } from "@/common-ui/ui/separator";
 import { Slider } from "@/common-ui/ui/slider"
 import { SectorEditingAttribute } from "@/types/sector.type";
 
@@ -10,42 +11,39 @@ const SeatDataOptions
     property: (keyof SectorEditingAttribute),
     controlType: string,
   }[] = [
-    { label: "sector-id", property: "sectorId", controlType: "input" },
+    { label: "ID", property: "sectorId", controlType: "input" },
     { label: "gap X", property: "sectorGapX", controlType: "slider" },
     { label: "gap Y", property: "sectorGapY", controlType: "slider" },
   ];
 
 type Props = {
-  editingElementAttributes: (SectorEditingAttribute);
+  editingElementUiAttributes: (SectorEditingAttribute);
   handleInputChange: (property: string, value: string | number) => void;
   keyboardEventDisableRef: React.MutableRefObject<boolean>;
   fabricRef: React.RefObject<fabric.Canvas | null>;
 };
 
 const SectorData = ({
-  editingElementAttributes,
+  editingElementUiAttributes,
   handleInputChange,
   keyboardEventDisableRef,
 }: Props) => {
 
-  // const getInitialInputValue = (attributeProperty: keyof SectorEditingAttribute) => {
-  //   if (!editingElementAttributes) {
-  //     return undefined;
-  //   }
-  //   const propertyValue = editingElementAttributes[attributeProperty];
-  //   if (propertyValue === undefined) {
-  //     return undefined;
-  //   }
-  //   return propertyValue;
-  // }
-
   return (
     <section className='prose p-5 flex flex-col border-b border-primary-grey-200'>
-      <h3 className=" prose-base">Sector</h3>
+      <div className='my-2 gap-2 flex flex-row items-center'>
+        <h3 className=" m-0">
+          {`Sector`}
+        </h3>
+        {/* <h3 className=" prose-base"> */}
+        <h3 className="m-0" style={{color: editingElementUiAttributes.fill}}>
+          {`${editingElementUiAttributes.sectorId}`}
+        </h3>
+      </div>
       <div className='flex flex-col gap-4'>
         {SeatDataOptions.map((item) => (
           <div
-            key={item.label}
+            key={item.property}
             className='flex flex-1 items-center gap-2 rounded-sm'
           >
             <Label htmlFor={item.property} className=' text-[12px] min-w-12'>
@@ -59,7 +57,7 @@ const SectorData = ({
                   (item.property === "sectorId") ? ('text') : ('number')
                 }
                 id={item.property}
-                value={(editingElementAttributes.sectorId)}
+                value={(editingElementUiAttributes.sectorId)}
                 placeholder={"?"}
                 min={1}
                 onChange={(e) => handleInputChange(item.property, e.target.value)}
@@ -75,13 +73,14 @@ const SectorData = ({
             }
 
             {("slider" === item.controlType) &&
-                <Slider
-                  defaultValue={[editingElementAttributes[(item.property as keyof SectorEditingAttribute)] as number]}
-                  min={0}
-                  max={100}
-                  step={1}
-                  onValueChange={(numbers: number[]) => handleInputChange(item.property, numbers[0])}
-                />
+              <Slider
+                id={item.property}
+                defaultValue={[editingElementUiAttributes[(item.property as keyof SectorEditingAttribute)] as number]}
+                min={0}
+                max={100}
+                step={1}
+                onValueChange={(numbers: number[]) => handleInputChange(item.property, numbers[0])}
+              />
             }
           </div>
         ))}

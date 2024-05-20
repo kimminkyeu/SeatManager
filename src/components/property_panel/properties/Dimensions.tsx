@@ -8,13 +8,13 @@ const dimensionsOptions = [
 ];
 
 type Props = {
-  editingElementAttributes: (ShapeEditingAttribute | null);
+  editingElementUiAttributes: (ShapeEditingAttribute | null);
   // isEditingRef: React.MutableRefObject<boolean>;
   handleInputChange: (property: string, value: string) => void;
 };
 
 const Dimensions = ({ 
-  editingElementAttributes, 
+  editingElementUiAttributes, 
   // isEditingRef, 
   handleInputChange 
 }: Props) => (
@@ -31,11 +31,11 @@ const Dimensions = ({
           <Input
             className='input-ring'
            // ---------------------------------------------
-            disabled={(null === editingElementAttributes)}
+            disabled={(null === editingElementUiAttributes)}
            // ---------------------------------------------
             type='number'
             id={item.property}
-            value={editingElementAttributes ? editingElementAttributes[(item.property as keyof ShapeEditingAttribute)] : 0}
+            value={editingElementUiAttributes ? editingElementUiAttributes[(item.property as keyof ShapeEditingAttribute)] : 0}
             placeholder={"?"}
             min={1}
             onChange={(e) => handleInputChange(item.property, e.target.value)}

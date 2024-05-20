@@ -1,5 +1,5 @@
 import React, { useMemo, useRef } from "react";
-import { EditingAttribute, RightSidebarProps } from "@/types/canvas.type";
+import { EditingAttribute } from "@/types/canvas.type";
 import { bringElementTo } from "@/lib/shapes";
 
 import Text from "@/components/property_panel/properties/Text";
@@ -12,19 +12,37 @@ import { Order } from "./properties/Order";
 import SectorData from "./properties/SectorData";
 import { SectorEditingAttribute } from "@/types/sector.type";
 import { SeatEditingAttributes } from "@/types/seat.type";
+import { twJoin } from "tailwind-merge";
+import { ObjectType, ObjectUtil } from "@/lib/type-check";
+import { EditorObject } from "@/types/editorObject.type";
+import HtmlPreview from "./properties/HtmlPreview";
+import { Updater } from "use-immer";
+import { Separator } from "@/common-ui/ui/separator";
+
+
+export type RightSidebarProps = {
+  editingElementUiAttributes: EditingAttribute | null;
+  setEditingElementUiAttributes: Updater<EditingAttribute | null>
+  fabricRef: React.RefObject<fabric.Canvas | null>;
+  keyboardEventDisableRef: React.MutableRefObject<boolean>;
+  exportToCustomFormat: () => void;
+  createHtmlPreview: () => string;
+};
 
 const PropertyPanel = ({
-  editingElementAttributes,
-  setEditingElementAttributes,
+  editingElementUiAttributes,
+  setEditingElementUiAttributes,
   fabricRef,
   keyboardEventDisableRef,
+  exportToCustomFormat,
+  createHtmlPreview,
 }: RightSidebarProps) => {
 
   const colorInputRef = useRef(null);
 
   const handleInputChange = (property: string, value: string | number) => {
 
-    setEditingElementAttributes(
+    setEditingElementUiAttributes(
       (prev: EditingAttribute | null) => {
         if (prev) {
           return ({ ...prev, [property]: value });
@@ -51,65 +69,49 @@ const PropertyPanel = ({
         min-w-[227px] max-w-56 max-sm:hidden select-none
       ">
 
-        { /* Show if editingElement is a Section Object */
-        // TODO: change this logic...
-        // TODO: EditingElementAttribute 을 아예 클래스를 만들자.
-        // 그리고 이게 어떤 editing인지 내부에 힌트를 집어넣어서 분기를 타자...
-          ( editingElementAttributes ) &&
-          ( "sectorId" in editingElementAttributes ) &&
+        { ( editingElementUiAttributes ) &&
+          ( "sectorId" in editingElementUiAttributes ) &&
           <SectorData
             fabricRef={fabricRef}
-            editingElementAttributes={editingElementAttributes as SectorEditingAttribute}
+            editingElementUiAttributes={editingElementUiAttributes as SectorEditingAttribute}
             handleInputChange={handleInputChange}
             keyboardEventDisableRef={keyboardEventDisableRef}
           />
         }
 
-        { /* Show if editingElement is a Seat Object */
-          ( editingElementAttributes ) &&
-          ( "seatRow" in editingElementAttributes ) &&
+        { (editingElementUiAttributes) &&
+          ("seatRow" in editingElementUiAttributes) &&
           <SeatData
             fabricRef={fabricRef}
-            editingElementAttributes={editingElementAttributes as SeatEditingAttributes}
+            editingElementUiAttributes={editingElementUiAttributes as SeatEditingAttributes}
             handleInputChange={handleInputChange}
             keyboardEventDisableRef={keyboardEventDisableRef}
           />
         }
 
-        {/* show if text object. */}
-        {/* <Text
-          fontFamily={editingElementAttributes.fontFamily}
-          fontSize={editingElementAttributes.fontSize}
-          fontWeight={editingElementAttributes.fontWeight}
-          handleInputChange={handleInputChange}
-        /> */}
-
-        { /* Show if editingElement has "fill" property */
-         ( editingElementAttributes ) &&
-         ( "fill" in editingElementAttributes ) &&
+        { (editingElementUiAttributes) &&
+          ("fill" in editingElementUiAttributes) &&
           <Color
             inputRef={colorInputRef}
-            editingElementAttributes={editingElementAttributes}
+            editingElementUiAttributes={editingElementUiAttributes}
             placeholder="color"
             attributeType="fill"
             handleInputChange={handleInputChange}
           />
         }
 
-        {
-         ( editingElementAttributes ) &&
-          <Order
-            fabricRef={fabricRef}
-          />
+        { (editingElementUiAttributes) &&
+          <Order fabricRef={fabricRef} />
         }
+        <Separator />
 
-        <Export 
-        />
+        <Export handleExport={exportToCustomFormat} />
+        <HtmlPreview createHtmlPreview={createHtmlPreview} />
 
       </section>
     ),
-    [editingElementAttributes]
-  ); // only re-render when editingElementAttributes changes
+    [editingElementUiAttributes]
+  ); // only re-render when editingElementUiAttributes changes
 
   return memoizedContent;
 };

@@ -7,21 +7,21 @@ import {
   CanvasMouseUp,
   CanvasObjectModified,
   CanvasObjectScaling,
-  CanvasPathCreated,
+  // CanvasPathCreated,
   CanvasSelectionCreated,
   CanvasSelectionUpdated,
   EditingAttribute,
   RenderCanvas,
   ShapeEditingAttribute,
 } from "@/types/canvas.type";
-import { TOOL_VALUE } from "@/constants";
-import { createSeat } from "./seat";
+import { DEFAULT_BACKGROUND_COLOR, TOOL_VALUE } from "@/constants";
 import { createShape } from "./shapes";
 import { Assert } from "./assert";
-import { createSector } from "./sector";
+import { createSectorPreview } from "./sector";
 import { Seat } from "@/types/seat.type";
-import {  EditorObject, Sector } from "@/types/sector.type";
+import { Sector } from "@/types/sector.type";
 import { ObjectType, ObjectUtil } from "./type-check";
+import { EditorObject } from "@/types/editorObject.type";
 
 // initialize fabric canvas
 export const initializeFabric = ({
@@ -41,6 +41,7 @@ export const initializeFabric = ({
     width: canvasElement?.clientWidth,
     height: canvasElement?.clientHeight,
     preserveObjectStacking: true, // preserve order
+    backgroundColor: DEFAULT_BACKGROUND_COLOR,
   });
 
   // set canvas reference to fabricRef so we can use it later anywhere outside canvas listener
@@ -71,7 +72,8 @@ export const handleCanvasMouseDown = ({
   Assert.NonNull(elem);
   const currentX = event.clientX - elem.getBoundingClientRect().x;
   const currentY = event.clientY - elem.getBoundingClientRect().y;
-  let createdSeat = null;
+
+  let createdObj: fabric.Object | null | undefined = null;
 
   switch (selectedToolValueRef.current) {
 
@@ -92,7 +94,7 @@ export const handleCanvasMouseDown = ({
       break; // *****************************************************
 
     case (TOOL_VALUE.text):
-      createdSeat = createShape(
+      createdObj = createShape(
         TOOL_VALUE.text,
         pointer as any
       );
@@ -103,25 +105,28 @@ export const handleCanvasMouseDown = ({
       lastMousePointerRef.current = { x: currentX, y: currentY };
 
       // Create sector preview on mouse click
-      const sectorPreviewShape = createSector("", pointer as any, undefined, true);
+      const sectorPreviewShape = createSectorPreview(pointer as any);
       if (sectorPreviewShape) {
         previewCanvas.add(sectorPreviewShape);
+        sectorPreviewShape.setCoords();
         previewSeatShapeRef.current = sectorPreviewShape;
       }
       break; // *****************************************************
 
-    default: // create single seat object
-      createdSeat = createSeat(
-        selectedToolValueRef.current,
-        pointer as any
-      );
+    default: // create single seat
+      Assert.Never("아직 미구현된 기능입니다.");
+      // createdObj = new Seat(selectedToolValueRef.current, 0, 0);
+      // createdSeat = createSeat(
+      //   selectedToolValueRef.current,
+      //   pointer as any
+      // );
       break; // *****************************************************
   }
 
-  if (createdSeat) {
-    createdSeat.selectable = false; // make it unselectable
-    fabricCanvas.add(createdSeat);
-    lastModifiedObjectRef.current = createdSeat;
+  if (createdObj) {
+    createdObj.selectable = false; // make it unselectable
+    fabricCanvas.add(createdObj);
+    lastModifiedObjectRef.current = createdObj;
   }
 };
 
@@ -138,6 +143,7 @@ export const handleCanvasObjectModified = ({
 };
 
 // update shape in storage when path is created when in freeform mode
+/*
 export const handlePathCreated = ({
   options,
 }: CanvasPathCreated) => {
@@ -150,67 +156,27 @@ export const handlePathCreated = ({
     objectId: uuid4(),
   });
 };
+*/
 
-// check how object is moving on canvas and restrict it to canvas boundaries
-export const handleCanvasObjectMoving = ({
-  options,
-}: {
-  options: fabric.IEvent;
-}) => {
-  // get target object which is moving
-  const target = options.target as fabric.Object;
-
-  // target.canvas is the canvas on which the object is moving
-  const canvas = target.canvas as fabric.Canvas;
-
-  // set coordinates of target object
-  target.setCoords();
-
-  // restrict object to canvas boundaries (horizontal)
-  if (target && target.left) {
-    target.left = Math.max(
-      0,
-      Math.min(
-        target.left,
-        (canvas.width || 0) - (target.getScaledWidth() || target.width || 0)
-      )
-    );
-  }
-
-  // restrict object to canvas boundaries (vertical)
-  if (target && target.top) {
-    target.top = Math.max(
-      0,
-      Math.min(
-        target.top,
-        (canvas.height || 0) - (target.getScaledHeight() || target.height || 0)
-      )
-    );
-  }
-};
 
 export const createEditingAttribute = (source: fabric.Object): (EditingAttribute | null) => {
 
     switch (ObjectUtil.getType(source)) {
 
       case (ObjectType.SECTOR):
-        Assert.True(source instanceof Sector, "섹터 타입이 아닙니다.");
-        const sector = (source as Sector);
-        return (sector.toEditingAttibute());
-
+        /** Fall through */
       case (ObjectType.SEAT):
-        // Assert.True(source instanceof Seat);
-        // const seat = (source as Seat);
-        // return (seat.toEditingAttibute());
-        Assert.Never("아직 미구현된 기능입니다.");
-        return null;
+        /** Fall through */
+      case (ObjectType.VENUE):
+        /** Fall through */
+        return (source as EditorObject).toEditingAttibute();
 
       case (ObjectType.FABRIC_GROUP):
-        // alert("그룹은 일단 첫번째 자식만 띄우지만, 나중엔 공통 요소를 띄우는 걸로 변경해도 될 것 같다..")
+        // TODO: 그룹은 일단 첫번째 자식만 띄우지만, 나중엔 공통 요소를 띄우는 걸로 변경해도 될 것 같다..
         const objs = (source as fabric.Group).getObjects();
         return createShapeEditingAttribute(objs[0]);
 
-      default:
+      default: // Fabric Object
         return createShapeEditingAttribute(source);
     }
 }
@@ -239,35 +205,23 @@ export const createShapeEditingAttribute = (source: fabric.Object): ShapeEditing
 
 export const handleCanvasSelectionUpdated = ({
   options,
-  setEditingElementAttributes,
+  setEditingElementUiAttributes,
 }: CanvasSelectionUpdated) => {
   
-  // if no element is selected, return
   if (!options?.selected) {
     return;
   }
-
-  // get the selected element
   const selectedElement = options?.selected[0];
-
-  /**
-   * TODO: 만약 여러 물체가 선택되었다면, 어떻게 할 것인가??
-   * 만약 그룹이라면, 어떻게 할 것인가?
-   * 만약 섹터라면, 어떻게 할 것인가?
-   */
-
-  // if only one element is selected, set element attributes
-  if (selectedElement && options.selected.length === 1) {
-    
+  if (selectedElement && options.selected.length === 1) { 
     let attribute = createEditingAttribute(selectedElement);
-    setEditingElementAttributes(attribute);
+    setEditingElementUiAttributes(attribute);
   }
 }
 
 // set element attributes when element is selected
 export const handleCanvasSelectionCreated = ({
   options,
-  setEditingElementAttributes,
+  setEditingElementUiAttributes,
 }: CanvasSelectionCreated) => {
 
   // if no element is selected, return
@@ -285,16 +239,16 @@ export const handleCanvasSelectionCreated = ({
    */
 
   // if only one element is selected, set element attributes
-  if (selectedElement && options.selected.length === 1) {
-    const attribute = createEditingAttribute(selectedElement);
-    setEditingElementAttributes(attribute);
+  if (selectedElement && options.selected.length === 1) { 
+    let attribute = createEditingAttribute(selectedElement);
+    setEditingElementUiAttributes(attribute);
   }
 };
 
 // update element attributes when element is scaled
 export const handleCanvasObjectScaling = ({
   options,
-  setEditingElementAttributes,
+  setEditingElementUiAttributes,
 }: CanvasObjectScaling) => {
   const selectedElement = options.target;
 
@@ -307,7 +261,7 @@ export const handleCanvasObjectScaling = ({
     ? selectedElement?.height! * selectedElement?.scaleY
     : selectedElement?.height;
 
-  setEditingElementAttributes((prev: any) => ({
+  setEditingElementUiAttributes((prev: any) => ({
     ...prev,
     width: scaledWidth?.toFixed(0).toString() || "",
     height: scaledHeight?.toFixed(0).toString() || "",

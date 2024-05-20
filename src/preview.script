@@ -1,0 +1,21 @@
+
+/**
+ * 
+ * This is script file to run preview html DIV element.
+ * Check "html-preview" div element.
+ */
+
+console.log("preview.script loaded dynamically");
+
+function toggleClick(svg) {
+    svg.item(0).style.fill = "red";
+}
+
+setTimeout(() => {
+    var __myDiv = document.getElementById("html-preview");
+    var __tags = __myDiv.getElementsByTagName("a"); // get <a> tag inside children
+
+    Array.from(__tags).forEach(a => {
+        a.onclick = () => toggleClick(a.childNodes.item(0).getElementsByTagName("circle"));
+    });
+}, 10);

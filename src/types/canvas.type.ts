@@ -21,23 +21,6 @@ export type ToolElement = {
   value: string | Array<ToolElement>;
 };
 
-// https://devblogs.microsoft.com/typescript/announcing-typescript-2-2/
-// Mixin type
-export type Constructable = new (...args: any[]) => object;
-
-export function WithObjectId<BC extends Constructable>(Base: BC) {
-  return class extends Base {
-      private readonly _objectId = uuidv4();
-      public getObjectId() {
-          return this._objectId;
-      }
-  };
-}
-
-// fabric object type + our additional object id
-export type FabricObjectWithId<T extends fabric.Object> = T & {
-  objectId: string;
-}
 
 export type ModifyShape = {
   canvas: fabric.Canvas;
@@ -56,13 +39,6 @@ export type ImageUpload = {
 };
 
 export type EditingAttribute = SectorEditingAttribute | SeatEditingAttributes | ShapeEditingAttribute;
-
-export type RightSidebarProps = {
-  editingElementAttributes: EditingAttribute | null;
-  setEditingElementAttributes: Updater<EditingAttribute | null>
-  fabricRef: React.RefObject<fabric.Canvas | null>;
-  keyboardEventDisableRef: React.MutableRefObject<boolean>;
-};
 
 export type ShapesMenuProps = {
   item: {
@@ -105,23 +81,23 @@ export type CanvasObjectModified = {
   options: fabric.IEvent;
 };
 
-export type CanvasPathCreated = {
-  options: (fabric.IEvent & { path: FabricObjectWithId<fabric.Path> }) | any;
-};
+// export type CanvasPathCreated = {
+//   options: (fabric.IEvent & { path: FabricObjectWithId<fabric.Path> }) | any;
+// };
 
 export type CanvasSelectionCreated = {
   options: fabric.IEvent;
-  setEditingElementAttributes: Updater<EditingAttribute | null>
+  setEditingElementUiAttributes: Updater<EditingAttribute | null>
 };
 
 export type CanvasSelectionUpdated = {
   options: fabric.IEvent;
-  setEditingElementAttributes: Updater<EditingAttribute | null>
+  setEditingElementUiAttributes: Updater<EditingAttribute | null>
 };
 
 export type CanvasObjectScaling = {
   options: fabric.IEvent;
-  setEditingElementAttributes: Updater<EditingAttribute | null>
+  setEditingElementUiAttributes: Updater<EditingAttribute | null>
 };
 
 export type RenderCanvas = {
