@@ -135,11 +135,20 @@ export class Seat extends EditorObject implements Capturable {
     // ---------------------------------------------------------------------
     public override onUpdate() {
         console.log("Seat: onUpdate()");
+
         // reset angle of seat.
         const sectorAngle = this.group?.angle;
+        const seatAngle = this.angle;
+
         if (sectorAngle) { // if parent is sector + angle exists.
             const textAngle = ((360 - (sectorAngle)) % 360);
             this._textObject.set({angle: textAngle});
+            return;
+        }
+        if (seatAngle) {
+            const textAngle = ((360 - (seatAngle)) % 360);
+            this._textObject.set({angle: textAngle});
+            return;
         }
     }
 
@@ -198,6 +207,7 @@ export class Seat extends EditorObject implements Capturable {
         if (options) {
             this.setOptions(options); // 객체 다 추가하고나서 option 대입 (ex. Angle 전체 적용)
         }
+        this.onUpdate();
     }
     // ---------------------------------------------------------------------
     // for ( editing attribute input change --> instance update )

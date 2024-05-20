@@ -8,6 +8,7 @@ import { createText } from "@/lib/shapes";
 import { createShapeEditingAttribute } from "@/lib/canvas";
 import { ObjectType, ObjectUtil } from "@/lib/type-check";
 import { Capturable, EditorObject, ExportAdjustment } from "./editorObject.type";
+import { cloneDeep } from "lodash";
 
 export interface SectorEditingAttribute extends ShapeEditingAttribute {
     sectorId: string;
@@ -116,8 +117,27 @@ export class Sector extends EditorObject implements Capturable {
         return SVG;
     }
 
+    // 
     public override toHTML(adjustment?: ExportAdjustment): string {
         let htmlTag = "";
+
+        // ---------------------------------------------------------
+        // 이 경우는 편집모드를 거친 Sector다.
+        if (this._seatRowCount === 0 || this._seatColCount === 0) {
+            const raw = cloneDeep(this)
+            const dest = raw.destroy() as Sector;
+            dest.getSeats().forEach((obj: fabric.Object) => {
+                if (ObjectType.SEAT === ObjectUtil.getType(obj)) {
+                    Assert.True(obj instanceof Seat);
+                    const seat = obj as Seat;
+                    htmlTag += (seat.toHTML(adjustment) + '\n');
+                }
+            });
+            return htmlTag;
+        }
+
+        // ---------------------------------------------------------
+        // 이 경우는 편집모드를 안거친 Sector다. 따라서 내부 생성자로 좌석을 생성한다.
         const raw2: Sector = (this.constructNewCopy());
         raw2.setOptions({
             left: raw2.left! - raw2.width!/2,
@@ -255,6 +275,8 @@ export class Sector extends EditorObject implements Capturable {
     // NOTE: 현재 개발중입니다.
     public addSeatWithUpdate(seat: Seat) {
         // row, col이 잘 작성되어 있는게 매우 중요한데.. 
+        this._seatRowCount = 0; // 매우 중요.
+        this._seatColCount = 0; // 매우 중요.
         // 왜내면 나중에 html로 변환할때, Sector.constructNew를 호출하거든.
         // row col 이 0이면, 좌석이 동적으로 생성된게 아닌거다!
         this.addWithUpdate(seat);
