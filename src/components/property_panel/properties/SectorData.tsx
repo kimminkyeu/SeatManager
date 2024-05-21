@@ -33,9 +33,8 @@ const SectorData = ({
     <section className='prose p-5 flex flex-col border-b border-primary-grey-200'>
       <div className='my-2 gap-2 flex flex-row items-center'>
         <h3 className=" m-0">
-          {`Sector`}
+          {`구역명 :`}
         </h3>
-        {/* <h3 className=" prose-base"> */}
         <h3 className="m-0" style={{color: editingElementUiAttributes.fill}}>
           {`${editingElementUiAttributes.sectorId}`}
         </h3>

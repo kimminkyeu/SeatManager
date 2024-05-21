@@ -115,8 +115,8 @@ export class Venue extends EditableObject {
 
         this.originX = 'left';
         this.originY = 'top';
-        this.lockMovementX = true;
-        this.lockMovementY = true;
+        this.lockMovementX = false;
+        this.lockMovementY = false;
         this.lockScalingX = false;
         this.lockScalingY = false;
         this.lockRotation = true;

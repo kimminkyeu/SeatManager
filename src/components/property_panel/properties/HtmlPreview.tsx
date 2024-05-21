@@ -73,7 +73,7 @@ export function HtmlPreview({
 
           {/* 좌석정보 */}
           <div
-            className=" prose-2xl text-red-600"
+            className=" prose-2xl font-bold text-red-600"
             id="preview-selected-seat-info"
           />
 

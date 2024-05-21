@@ -142,21 +142,15 @@ export const handleCanvasObjectModified = ({
   }
 };
 
-// update shape in storage when path is created when in freeform mode
-/*
-export const handlePathCreated = ({
-  options,
-}: CanvasPathCreated) => {
-  // get path object
-  const path = options.path;
-  if (!path) return;
 
-  // set unique id to path object
-  path.set({
-    objectId: uuid4(),
-  });
-};
-*/
+/**
+ * TODO: 구현 필요!!!
+ * @deprecated 현재 구현중입니다... (복수개 선택시 Attribute)
+ */
+export const createEditingAttribute_MultipleSelection = (sources: fabric.Object[]): (EditingAttribute | null) => {
+  //...
+  return createEditingAttribute(sources[0]);
+}
 
 
 export const createEditingAttribute = (source: fabric.Object): (EditingAttribute | null) => {
@@ -216,6 +210,16 @@ export const handleCanvasSelectionUpdated = ({
   if (selectedElement && options.selected.length === 1) { 
     let attribute = createEditingAttribute(selectedElement);
     setEditingElementUiAttributes(attribute);
+    return;
+  }
+
+  // 
+  // 여러 물체들이 선택된 경우. (TODO: 여러개일 경우 구현 필요.)
+  // 
+  if (selectedElement && (1 < options.selected.length)) {
+    let attribute = createEditingAttribute_MultipleSelection(options.selected);
+    setEditingElementUiAttributes(attribute);
+    return;
   }
 }
 
@@ -243,6 +247,16 @@ export const handleCanvasSelectionCreated = ({
   if (selectedElement && options.selected.length === 1) { 
     let attribute = createEditingAttribute(selectedElement);
     setEditingElementUiAttributes(attribute);
+    return;
+  }
+
+  // 
+  // 여러 물체들이 선택된 경우. (TODO: 여러개일 경우 구현 필요.)
+  // 
+  if (selectedElement && (1 < options.selected.length)) {
+    let attribute = createEditingAttribute_MultipleSelection(options.selected);
+    setEditingElementUiAttributes(attribute);
+    return;
   }
 };
 

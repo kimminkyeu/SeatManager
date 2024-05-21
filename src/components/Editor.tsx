@@ -291,19 +291,19 @@ function Editor(): ReactElement {
     
         // ---------------------------------------------------------
         // 1. 현재 선택된 Sector가 아닌 그 외 모든 물체는 Lock한다.
-        let sector = canvas.getActiveObject() as (Sector | null);
+        let selectedSector = canvas.getActiveObject() as (Sector | null);
 
         canvas.forEachObject((obj: fabric.Object) => {
             const type = ObjectUtil.getType(obj);
             // Except selected sector.
-            if (ObjectType.SECTOR !== type) {
+            if (obj !== selectedSector) {
                 obj.set({
                     selectable: (true === isEditingMode) ? (false) : (true),
                     evented: (true === isEditingMode) ? (false) : (true),
                     opacity: (true === isEditingMode) ? (0.35) : (1),
                 })
             }
-            if (ObjectType.VENUE === type) {
+            if (obj !== selectedSector && ObjectType.VENUE === type) {
                 (obj as Venue).visible = (true === isEditingMode) ? (false) : (true);
             }
         });
@@ -313,18 +313,18 @@ function Editor(): ReactElement {
         // ---------------------------------------------------------
         // 2. 편집 모드 활성화라면, 현재 선택된 Sector를 해체한다.
         if (true === isEditingMode) {
-            Assert.NonNull(sector);
+            Assert.NonNull(selectedSector);
             Assert.True(
-                (ObjectType.SECTOR === ObjectUtil.getType(sector)),
+                (ObjectType.SECTOR === ObjectUtil.getType(selectedSector)),
                 "편집 대상 Object는 Sector여야 합니다."
             );
 
-            editingSectorRef.current = sector;
+            editingSectorRef.current = selectedSector;
             editingSeatsRef.current = new Map<string, Seat>();
 
             const selection = new fabric.ActiveSelection(undefined, { canvas: canvas });
-            canvas.remove(sector);
-            (sector.destroy() as Sector).getSeats().forEach((seat: Seat) => {
+            canvas.remove(selectedSector);
+            (selectedSector.destroy() as Sector).getSeats().forEach((seat: Seat) => {
                 Assert.True(seat instanceof Seat);
                 const copiedSeat = seat.constructNewCopy();
                 canvas.add(copiedSeat);
@@ -540,7 +540,7 @@ function Editor(): ReactElement {
         // -----------------------------------------------------------------
         fabricCanvas.on("selection:created", function (options: fabric.IEvent) {
             console.log(`fabric: [selection:created]`);
-            handleCanvasSelectionUpdated({ // for editing Attribute
+            handleCanvasSelectionCreated({ // for editing Attribute
                 options,
                 setEditingElementUiAttributes,
             })
@@ -618,8 +618,8 @@ function Editor(): ReactElement {
         fabricCanvas.on("object:modified", (options) => {
             console.log("fabric: [object:modified]");
             const target = options.target as fabric.Object;
-            if (target instanceof ReservableObject) {
-                (target as ReservableObject).onModified();
+            if (target instanceof EditableObject) {
+                (target as EditableObject).onModified();
             }
         });
 
