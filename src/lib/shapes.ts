@@ -148,21 +148,6 @@ export const modifyObject = ({
 
     switch (ObjectUtil.getType(selectedElement)) {
 
-      /**
-       * getter setter를 깔끔하게 정리하니까, 아래 코드가 정돈되긴 하네...
-       */
-      case (ObjectType.SECTOR):
-        Assert.True(selectedElement instanceof Sector);
-        const sector = (selectedElement as Sector);
-        modifyShapeInternal(sector, property, value);
-        break;
-
-      case (ObjectType.SEAT):
-        Assert.True(selectedElement instanceof Seat);
-        const seat = (selectedElement as Seat);
-        modifyShapeInternal(seat, property, value);
-        break;
-
       case (ObjectType.FABRIC_GROUP):
         modifyShapeInternal(selectedElement, property, value);
         (selectedElement as fabric.Group)

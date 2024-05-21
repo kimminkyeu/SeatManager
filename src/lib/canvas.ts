@@ -21,7 +21,7 @@ import { createSectorPreview } from "./sector";
 import { Seat } from "@/types/seat.type";
 import { Sector } from "@/types/sector.type";
 import { ObjectType, ObjectUtil } from "./type-check";
-import { EditorObject } from "@/types/editorObject.type";
+import { ReservableObject } from "@/types/editorObject.type";
 
 // initialize fabric canvas
 export const initializeFabric = ({
@@ -169,7 +169,7 @@ export const createEditingAttribute = (source: fabric.Object): (EditingAttribute
         /** Fall through */
       case (ObjectType.VENUE):
         /** Fall through */
-        return (source as EditorObject).toEditingAttibute();
+        return (source as ReservableObject).toEditingAttibute();
 
       case (ObjectType.FABRIC_GROUP):
         // TODO: 그룹은 일단 첫번째 자식만 띄우지만, 나중엔 공통 요소를 띄우는 걸로 변경해도 될 것 같다..
@@ -189,6 +189,7 @@ export const createShapeEditingAttribute = (source: fabric.Object): ShapeEditing
     ? source.height! * source?.scaleY
     : source.height;
   let attribute: ShapeEditingAttribute = {
+    type: "ShapeEditingAttribute",
     width: scaledWidth?.toFixed(0).toString() || "",
     height: scaledHeight?.toFixed(0).toString() || "",
     fill: source.fill?.toString() || "",

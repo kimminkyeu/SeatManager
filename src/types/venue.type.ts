@@ -5,20 +5,27 @@
  */
 
 import { ObjectType } from "@/lib/type-check";
-import { EditorObject } from "./editorObject.type";
+import { EditableObject } from "./editorObject.type";
 import { Assert } from "@/lib/assert";
 import { Sector } from "./sector.type";
 import { IGroupOptions } from "fabric/fabric-impl";
 import { createShape, createText } from "@/lib/shapes";
 import { COLORS } from "@/constants";
+import { ShapeEditingAttribute } from "./canvas.type";
 
-// Venue는 외곽선과 텍스트를 그룹으로 갖지만, 내부 Sector들을 그룹으로 갖지는 않는다.
-export interface VenuEditingAttribute {
+
+// Omit : https://stackoverflow.com/questions/48215950/exclude-property-from-type
+export interface VenueEditingAttributes {
+    type: 'VenueEditingAttribute';
     venueId: string;
     // ...
 }
 
-export class Venue extends EditorObject {
+/**
+ * @description
+ * Venue는 외곽선과 텍스트를 그룹으로 갖지만, 내부 Sector들을 그룹으로 갖지는 않는다.
+ */
+export class Venue extends EditableObject {
 
     private static readonly _shapeType = ObjectType.FABRIC_RECT;
     private static readonly _staticFontSize: number = 20;
@@ -28,13 +35,7 @@ export class Venue extends EditorObject {
     private _textObject: fabric.Text;
     private _borderObject: fabric.Object;
 
-    // data format for Right sidebar's React.State
-    public override toEditingAttibute() {
-        return {
-            venueId: this._venueId,
-        }
-    }
-
+    // ------------------------------------------------------------------------
     public get venueId() {
         return this._venueId;
     }
@@ -45,6 +46,61 @@ export class Venue extends EditorObject {
         this.addWithUpdate();
     }
 
+    // ------------------------------------------------------------------------
+    // data format for Right sidebar's React.State
+    public override toEditingAttibute() {
+        return {
+            type: "VenueEditingAttribute",
+            venueId: this._venueId,
+        } as VenueEditingAttributes;
+    }
+
+    /**
+     * @deprecated 현재는 사용 금지이나, 나중에 추가될 예정임.
+     */
+    public override get editorObjectData(): any {
+        Assert.Never("Venue는 현재는 Edit 기능 + 복붙 기능 없기 때문에, object로 변환할 필요가 없습니다.");
+        return null;
+    }
+
+    /**
+     * @deprecated 현재는 사용 금지이나, 나중에 추가될 예정임.
+     */
+    public override toObject(propertiesToInclude?: string[] | undefined) {
+        Assert.Never("Venue는 현재는 Edit 기능 + 복붙 기능 없기 때문에, object로 변환할 필요가 없습니다.");
+        return null;
+    }
+
+    // ------------------------------------------------------------------------
+    public override onRotating(): void {}
+
+    public override onScaling(): void {
+        this._textObject.setOptions({
+            visible: false,
+        });
+    }
+
+    public override onModified(): void {
+        // 흠.... 이게 맞을까...?
+        this.removeWithUpdate(this._textObject);
+        const text = createText(
+            `Venue: ${this._venueId}`,
+            undefined,
+            {
+                fontSize: Venue._staticFontSize,
+            }
+        );
+        this.add(text); // update bounding box
+        this._textObject = text;
+
+        this._textObject.setOptions({
+            left: -(this.width! / 2) + (Venue._staticFontSize),
+            top: -(this.height! / 2) + (Venue._staticFontSize),
+        });
+        this.addWithUpdate();
+    }
+
+    // ------------------------------------------------------------------------
     constructor(
         venueId: string,
         width: number,
@@ -113,56 +169,5 @@ export class Venue extends EditorObject {
         if (options) {
             this.setOptions({options}); // 객체 다 추가하고나서 option 대입 (ex. Angle 전체 적용)
         }
-    }
-
-    /**
-     * @deprecated  아직 개발 중입니다. 쓰지 마세요.
-     */
-    public override toHTML(): string {
-
-        let htmlTag = ""; // 내부에 객체들을 집어넣지 않고 있다.
-        htmlTag += `<svg id="${this._venueId}" style=\"width:${this.width}px; height:${this.height}px\">`;
-        this._sectors.forEach((sector: Sector) => {
-            htmlTag += (sector.toHTML());
-        })
-        htmlTag += "</svg>";
-        return htmlTag;
-    }
-
-    // for copy-paste ( toObject() data --> new instance  ) 
-    public override get editorObjectData(): any {
-        Assert.Never("Venue는 object로 변환할 필요가 없습니다.");
-        return null;
-    }
-
-    public override toObject(propertiesToInclude?: string[] | undefined) {
-        Assert.Never("Venue는 object로 변환할 필요가 없습니다.");
-        return null;
-    }
-
-    public override onScale(): void {
-        this._textObject.setOptions({
-            visible: false,
-        });
-    }
-
-    public override onUpdate(): void {
-        // 흠.... 이게 맞을까...?
-        this.removeWithUpdate(this._textObject);
-        const text = createText(
-            `Venue: ${this._venueId}`,
-            undefined,
-            {
-                fontSize: Venue._staticFontSize,
-            }
-        );
-        this.add(text); // update bounding box
-        this._textObject = text;
-
-        this._textObject.setOptions({
-            left: -(this.width! / 2) + (Venue._staticFontSize),
-            top: -(this.height! / 2) + (Venue._staticFontSize),
-        });
-        this.addWithUpdate();
     }
 }

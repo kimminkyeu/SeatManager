@@ -1,5 +1,5 @@
 import { TOOL_VALUE } from "@/constants";
-import { EditorObject } from "@/types/editorObject.type";
+import { EditableObject } from "@/types/editorObject.type";
 import { fabric } from "fabric";
 
 export const ObjectType = {
@@ -22,17 +22,10 @@ export const ObjectType = {
 
 export class ObjectUtil {
 
-    public static isEditorObject(object: fabric.Object) {
-        if ("editorObjectType" in object) {
-            return true;
-        }
-        return false;
-    }
-
     public static getType(object: fabric.Object) {
-        if ("editorObjectType" in object) {
-            return (object as EditorObject).editorObjectType;
+        if (object instanceof EditableObject) {
+            return (object as EditableObject).editableObjectType;
         }
-        return object.type;
+        return object.type; // return fabricJs native type (rect, i-text, etc...)
     }
 }

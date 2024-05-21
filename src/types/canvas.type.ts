@@ -3,8 +3,19 @@ import { SeatEditingAttributes } from "./seat.type";
 import { SectorEditingAttribute } from "./sector.type";
 import { fabric } from "fabric";
 import { v4 as uuidv4 } from 'uuid';
+import { VenueEditingAttributes } from "./venue.type";
+
+export const AttributeType = {
+  ShapeEditingAttribute: "ShapeEditingAttribute",
+  SeatEditingAttribute: "SeatEditingAttribute",
+  SectorEditingAttribute: "SectorEditingAttribute",
+  VenueEditingAttribute: "VenueEditingAttribute",
+}
+
+export type EditingAttribute = VenueEditingAttributes | SectorEditingAttribute | SeatEditingAttributes | ShapeEditingAttribute;
 
 export interface ShapeEditingAttribute {
+  type: "ShapeEditingAttribute",
   width: string;
   height: string;
   fontSize: string;
@@ -13,7 +24,6 @@ export interface ShapeEditingAttribute {
   fill: string;
   stroke: string;
 };
-
 
 export type ToolElement = {
   icon: string;
@@ -37,8 +47,6 @@ export type ImageUpload = {
   file: File;
   canvas: React.MutableRefObject<fabric.Canvas>;
 };
-
-export type EditingAttribute = SectorEditingAttribute | SeatEditingAttributes | ShapeEditingAttribute;
 
 export type ShapesMenuProps = {
   item: {

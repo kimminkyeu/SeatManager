@@ -7,16 +7,19 @@ import { Assert } from "@/lib/assert";
 import { createText } from "@/lib/shapes";
 import { createShapeEditingAttribute } from "@/lib/canvas";
 import { ObjectType, ObjectUtil } from "@/lib/type-check";
-import { Capturable, EditorObject, ExportAdjustment } from "./editorObject.type";
+import { Capturable, ReservableObject, PositionAdjustment } from "./editorObject.type";
 import { cloneDeep } from "lodash";
+import { SeatMappingData } from "./export.type";
 
-export interface SectorEditingAttribute extends ShapeEditingAttribute {
+// Omit : https://stackoverflow.com/questions/48215950/exclude-property-from-type
+export interface SectorEditingAttribute extends Omit<ShapeEditingAttribute, 'type'> {
+    type: 'SectorEditingAttribute';
     sectorId: string;
     sectorGapX: number;
     sectorGapY: number;
 }
 
-export class Sector extends EditorObject implements Capturable {
+export class Sector extends ReservableObject implements Capturable {
     // ----------------------------------------
     private _sectorId: string; // sectorId
     private _gapX: number = 0; // sectorId
@@ -27,19 +30,8 @@ export class Sector extends EditorObject implements Capturable {
     private _anglePrev: number = 0; // temporal value for slider
     // private _textObject: fabric.Text; // description text
     private _sectorColor: string;
+
     // ---------------------------------------- 
-
-    // data format for Right sidebar's React.State
-    public toEditingAttibute(): EditingAttribute {
-        const shapeAttribute = createShapeEditingAttribute(this as fabric.Object);
-        const sectorAttribute = (shapeAttribute as SectorEditingAttribute);
-        sectorAttribute.sectorId = this._sectorId;
-        sectorAttribute.sectorGapX = this._gapX;
-        sectorAttribute.sectorGapY = this._gapY;
-        sectorAttribute.fill = this.fill;
-        return sectorAttribute;
-    }
-
     public get sectorId() {
         return this._sectorId;
     }
@@ -63,7 +55,6 @@ export class Sector extends EditorObject implements Capturable {
         return this._sectorColor;
     }
 
-    // ---------------------------------------------------------------------
     // for ( editing attribute input change --> instance update )
     public set fill(color: string) {
         this._sectorColor = color;
@@ -72,7 +63,6 @@ export class Sector extends EditorObject implements Capturable {
         })
     }
  
-
     // for ( editing attribute input change --> instance update )
     public set sectorId(id: string) {
         this._sectorId = id;
@@ -89,6 +79,19 @@ export class Sector extends EditorObject implements Capturable {
         console.log("Sector: set sectorGapY() called");
         this._applyGapYandUpdate(y);
     } 
+
+    // ---------------------------------------------------------------------
+    // data format for Right sidebar's React.State
+    public override toEditingAttibute(): EditingAttribute {
+        const shapeAttribute = createShapeEditingAttribute(this as fabric.Object) as EditingAttribute;
+        const sectorAttribute = (shapeAttribute as SectorEditingAttribute);
+        sectorAttribute.type = "SectorEditingAttribute";
+        sectorAttribute.sectorId = this._sectorId;
+        sectorAttribute.sectorGapX = this._gapX;
+        sectorAttribute.sectorGapY = this._gapY;
+        sectorAttribute.fill = this.fill;
+        return sectorAttribute;
+    }
 
     // for ( toObject() data --> new instance  )
     public override get editorObjectData() {
@@ -117,42 +120,47 @@ export class Sector extends EditorObject implements Capturable {
         return SVG;
     }
 
-    // 
-    public override toHTML(adjustment?: ExportAdjustment): string {
-        let htmlTag = "";
+    public override toHTML(adjustment?: PositionAdjustment): string {
+        let html = "";
+        this._collectDataFromEachSeat((seat) => {
+            html += (seat.toHTML(adjustment) + '\n');
+        })
+        return html;
+    }
 
-        // ---------------------------------------------------------
-        // 이 경우는 편집모드를 거친 Sector다.
-        if (this._seatRowCount === 0 || this._seatColCount === 0) {
-            const raw = cloneDeep(this)
-            const dest = raw.destroy() as Sector;
-            dest.getSeats().forEach((obj: fabric.Object) => {
-                if (ObjectType.SEAT === ObjectUtil.getType(obj)) {
-                    Assert.True(obj instanceof Seat);
-                    const seat = obj as Seat;
-                    htmlTag += (seat.toHTML(adjustment) + '\n');
-                }
-            });
-            return htmlTag;
-        }
+    // !!!
+    public toTagsAndMappingData(adjustment?: PositionAdjustment | undefined): { tags: string[]; mappingData: SeatMappingData[]; } {
 
-        // ---------------------------------------------------------
-        // 이 경우는 편집모드를 안거친 Sector다. 따라서 내부 생성자로 좌석을 생성한다.
-        const raw2: Sector = (this.constructNewCopy());
-        raw2.setOptions({
-            left: raw2.left! - raw2.width!/2,
-            top: raw2.top! - raw2.height!/2,
-        });
+        const tags: Array<string> = [];
+        const mappingData: Array<SeatMappingData> = [];
 
-        const destroyed = raw2.destroy();
-        (destroyed as Sector).getSeats().forEach((obj: fabric.Object) => {
-            if (ObjectType.SEAT === ObjectUtil.getType(obj)) {
-                Assert.True(obj instanceof Seat);
-                const seat = obj as Seat;
-                htmlTag += (seat.toHTML(adjustment) + '\n');
+        this._collectDataFromEachSeat(
+            (seat) => {
+                const val = seat.toTagsAndMappingData(adjustment);
+                val.mappingData.forEach(m => (m.sectorId = this.sectorId));
+                tags.push(...val.tags);
+                mappingData.push(...val.mappingData);
             }
-        });
-        return htmlTag;
+        )
+        return {
+            tags: tags,
+            mappingData: mappingData,
+        };
+    }
+
+    // ---------------------------------------------------------------------
+    public override onRotating(): void {}
+
+    public override onScaling(): void {}
+
+    public override onModified(): void {
+        console.log("Sector onModified()");
+        // change text angle.
+        if (this.angle) {
+            this.getSeats().forEach((seat: Seat) => {
+                seat.onModified();
+            })
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -165,6 +173,16 @@ export class Sector extends EditorObject implements Capturable {
             }
         })
         return seats;
+    }
+
+    // NOTE: 현재 개발중입니다.
+    public addSeatWithUpdate(seat: Seat) {
+        // row, col이 잘 작성되어 있는게 매우 중요한데.. 
+        this._seatRowCount = 0; // 매우 중요.
+        this._seatColCount = 0; // 매우 중요.
+        // 왜내면 나중에 html로 변환할때, Sector.constructNew를 호출하거든.
+        // row col 이 0이면, 좌석이 동적으로 생성된게 아닌거다!
+        this.addWithUpdate(seat);
     }
 
     public constructNewCopy(): Sector {
@@ -185,25 +203,11 @@ export class Sector extends EditorObject implements Capturable {
         );
     }
 
-    public override onRotate(): void {}
-
-    // ---------------------------------------------------------------------
-    public override onUpdate(): void {
-        console.log("Sector onUpdate()");
-        // change text angle.
-        if (this.angle) {
-            this.getSeats().forEach((seat: Seat) => {
-                seat.onUpdate();
-            })
-        }
-    }
-
-    // ---------------------------------------------------------------------
     constructor(
         shapeType: string,
         sectorId: string,
-        rows?: number,
-        cols?: number,
+        rowsToGenerate?: number,
+        colsToGenerate?: number,
         gapX?: number,
         gapY?: number,
         options?: IGroupOptions
@@ -218,11 +222,11 @@ export class Sector extends EditorObject implements Capturable {
         if (gapY) {
             this._gapY = gapY;
         }
-        if (rows) {
-            this._seatRowCount = rows;
+        if (rowsToGenerate) {
+            this._seatRowCount = rowsToGenerate;
         }
-        if (cols) {
-            this._seatColCount = cols;
+        if (colsToGenerate) {
+            this._seatColCount = colsToGenerate;
         }
 
         this._sectorColor = (options?.fill ?? COLORS.object.default) as string;
@@ -247,9 +251,9 @@ export class Sector extends EditorObject implements Capturable {
         const leftPos = (options?.left ?? 0);
         const topPos = (options?.top ?? 0);
 
-        if (rows && cols) {
-            for (let row = 0; row < rows; ++row) {
-                for (let col = 0; col < cols; ++col) {
+        if (rowsToGenerate && colsToGenerate) {
+            for (let row = 0; row < rowsToGenerate; ++row) {
+                for (let col = 0; col < colsToGenerate; ++col) {
                     const seat = new Seat(
                         this.baseShape,
                         row + 1, // start with 1
@@ -272,16 +276,7 @@ export class Sector extends EditorObject implements Capturable {
         }
     }
 
-    // NOTE: 현재 개발중입니다.
-    public addSeatWithUpdate(seat: Seat) {
-        // row, col이 잘 작성되어 있는게 매우 중요한데.. 
-        this._seatRowCount = 0; // 매우 중요.
-        this._seatColCount = 0; // 매우 중요.
-        // 왜내면 나중에 html로 변환할때, Sector.constructNew를 호출하거든.
-        // row col 이 0이면, 좌석이 동적으로 생성된게 아닌거다!
-        this.addWithUpdate(seat);
-    }
-
+    // ---------------------------------------------------------------------
     private _applyGapXandUpdate(newGapX: number) {
 
         this._gapPrev = this._gapX;
@@ -338,4 +333,53 @@ export class Sector extends EditorObject implements Capturable {
             originY: "center",
         });
     }
+
+    /**
+     * @description
+     * (1) 생성자들 통해 좌석을 자동으로 생성한 Sector이고, (생성자에 row, col을 입력한 경우)
+     * (2) 그 상태에서 편집모드를 한번도 거치지 않았다면
+     *      => true를 반환합니다.
+     */
+    private _isAutoSeatGeneratedSector() {
+        return (this._seatRowCount === 0 || this._seatColCount === 0);
+    }
+
+    /**
+     * @description 같은 오브젝트 아이디를 두개의 collector가 공유하기 위해서, 동시에 전달함...
+     */
+    private _collectDataFromEachSeat(
+        collector: (seat: Seat) => void, // for html tag
+    ) {
+
+        // (1) 이 경우는 편집모드를 거친 Sector다.
+        if (true === this._isAutoSeatGeneratedSector()) {
+            const raw = cloneDeep(this)
+            const dest = raw.destroy() as Sector;
+            dest.getSeats().forEach((obj: fabric.Object) => {
+                if (ObjectType.SEAT === ObjectUtil.getType(obj)) {
+                    Assert.True(obj instanceof Seat);
+                    collector(obj as Seat);
+                }
+            });
+            return;
+        }
+
+        // (2) 이 경우는 편집모드를 안거친 Sector다. 따라서 내부 생성자로 좌석을 생성한다.
+        const raw2: Sector = (this.constructNewCopy());
+        raw2.setOptions({
+            left: raw2.left! - raw2.width! / 2,
+            top: raw2.top! - raw2.height! / 2,
+        });
+
+        const destroyed = raw2.destroy();
+        (destroyed as Sector).getSeats().forEach((obj: fabric.Object) => {
+            if (ObjectType.SEAT === ObjectUtil.getType(obj)) {
+                Assert.True(obj instanceof Seat);
+                collector(obj as Seat);
+            }
+        });
+        return;
+    }
+
+
 }

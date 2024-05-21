@@ -11,11 +11,18 @@ function toggleClick(svg) {
     svg.item(0).style.fill = "red";
 }
 
-setTimeout(() => {
+setTimeout(() => { 
+
+    // main(); 
+
+}, 10);
+
+function main() {
     var __myDiv = document.getElementById("html-preview");
     var __tags = __myDiv.getElementsByTagName("a"); // get <a> tag inside children
 
     Array.from(__tags).forEach(a => {
         a.onclick = () => toggleClick(a.childNodes.item(0).getElementsByTagName("circle"));
     });
-}, 10);
+    
+}

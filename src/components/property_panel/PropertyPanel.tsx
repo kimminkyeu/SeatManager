@@ -1,5 +1,5 @@
 import React, { useMemo, useRef } from "react";
-import { EditingAttribute } from "@/types/canvas.type";
+import { AttributeType, EditingAttribute, ShapeEditingAttribute } from "@/types/canvas.type";
 import { bringElementTo } from "@/lib/shapes";
 
 import Text from "@/components/property_panel/properties/Text";
@@ -14,10 +14,12 @@ import { SectorEditingAttribute } from "@/types/sector.type";
 import { SeatEditingAttributes } from "@/types/seat.type";
 import { twJoin } from "tailwind-merge";
 import { ObjectType, ObjectUtil } from "@/lib/type-check";
-import { EditorObject } from "@/types/editorObject.type";
+import { ReservableObject } from "@/types/editorObject.type";
 import HtmlPreview from "./properties/HtmlPreview";
 import { Updater } from "use-immer";
 import { Separator } from "@/common-ui/ui/separator";
+import VenueData from "./properties/VenueData";
+import { VenueEditingAttributes } from "@/types/venue.type";
 
 
 export type RightSidebarProps = {
@@ -25,8 +27,9 @@ export type RightSidebarProps = {
   setEditingElementUiAttributes: Updater<EditingAttribute | null>
   fabricRef: React.RefObject<fabric.Canvas | null>;
   keyboardEventDisableRef: React.MutableRefObject<boolean>;
-  exportToCustomFormat: () => void;
+  exportToCustomJsonFormat: () => void;
   createHtmlPreview: () => string;
+  // htmlPreviewHandler: () => void;
 };
 
 const PropertyPanel = ({
@@ -34,8 +37,9 @@ const PropertyPanel = ({
   setEditingElementUiAttributes,
   fabricRef,
   keyboardEventDisableRef,
-  exportToCustomFormat,
+  exportToCustomJsonFormat,
   createHtmlPreview,
+  // htmlPreviewHandler,
 }: RightSidebarProps) => {
 
   const colorInputRef = useRef(null);
@@ -70,7 +74,7 @@ const PropertyPanel = ({
       ">
 
         { ( editingElementUiAttributes ) &&
-          ( "sectorId" in editingElementUiAttributes ) &&
+          ( editingElementUiAttributes.type === "SectorEditingAttribute" ) &&
           <SectorData
             fabricRef={fabricRef}
             editingElementUiAttributes={editingElementUiAttributes as SectorEditingAttribute}
@@ -79,8 +83,8 @@ const PropertyPanel = ({
           />
         }
 
-        { (editingElementUiAttributes) &&
-          ("seatRow" in editingElementUiAttributes) &&
+        { ( editingElementUiAttributes ) &&
+          ( editingElementUiAttributes.type === "SeatEditingAttribute" ) &&
           <SeatData
             fabricRef={fabricRef}
             editingElementUiAttributes={editingElementUiAttributes as SeatEditingAttributes}
@@ -89,11 +93,27 @@ const PropertyPanel = ({
           />
         }
 
-        { (editingElementUiAttributes) &&
-          ("fill" in editingElementUiAttributes) &&
+       { ( editingElementUiAttributes ) &&
+         ( editingElementUiAttributes.type === "VenueEditingAttribute" ) &&
+          <VenueData
+            fabricRef={fabricRef}
+            editingElementUiAttributes={editingElementUiAttributes as VenueEditingAttributes}
+            handleInputChange={handleInputChange}
+            keyboardEventDisableRef={keyboardEventDisableRef}
+          />
+        }
+
+
+        { ( editingElementUiAttributes ) &&
+          ( 
+            (editingElementUiAttributes.type === AttributeType.ShapeEditingAttribute) ||
+            (editingElementUiAttributes.type === AttributeType.SeatEditingAttribute)  ||
+            (editingElementUiAttributes.type === AttributeType.SectorEditingAttribute)
+          ) 
+           &&
           <Color
             inputRef={colorInputRef}
-            editingElementUiAttributes={editingElementUiAttributes}
+            editingElementUiAttributes={editingElementUiAttributes as ShapeEditingAttribute}
             placeholder="color"
             attributeType="fill"
             handleInputChange={handleInputChange}
@@ -103,10 +123,16 @@ const PropertyPanel = ({
         { (editingElementUiAttributes) &&
           <Order fabricRef={fabricRef} />
         }
+
         <Separator />
 
-        <Export handleExport={exportToCustomFormat} />
-        <HtmlPreview createHtmlPreview={createHtmlPreview} />
+        <HtmlPreview
+          createHtmlPreview={createHtmlPreview}
+        // htmlHandler={htmlPreviewHandler} 
+        />
+
+        <Export handleExport={exportToCustomJsonFormat} />
+
 
       </section>
     ),

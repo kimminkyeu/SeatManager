@@ -7,30 +7,24 @@ import { COLORS, SEAT_HEIGHT, SEAT_WIDTH } from "@/constants";
 import { createShapeEditingAttribute } from "@/lib/canvas";
 import { ObjectType } from "@/lib/type-check";
 import { createShape, createText } from "@/lib/shapes";
-import { Capturable, EditorObject, ExportAdjustment } from "./editorObject.type";
+import { Capturable, ReservableObject, PositionAdjustment, SeatExportable } from "./editorObject.type";
+import { SeatMappingData } from "./export.type";
 
-export interface SeatEditingAttributes extends ShapeEditingAttribute {
+// Omit : https://stackoverflow.com/questions/48215950/exclude-property-from-type
+export interface SeatEditingAttributes extends Omit<ShapeEditingAttribute, 'type'> {
+    type: "SeatEditingAttribute";
     seatRow?: number | undefined,
     seatCol?: number | undefined,
 }
 
-export class Seat extends EditorObject implements Capturable {
-    // ----------------------------------
+export class Seat extends ReservableObject implements Capturable {
+    // -----------------------------------------------------------------
     private _seatRow: number;
     private _seatCol: number;
     private _textObject: fabric.Text; // description text
     private _shapeObject: fabric.Object;
-    // ----------------------------------
 
-    public toEditingAttibute(): EditingAttribute {
-        const shapeAttribute = createShapeEditingAttribute(this as fabric.Object);
-        const seatAttribute = (shapeAttribute as SeatEditingAttributes);
-        seatAttribute.seatRow = this._seatRow;
-        seatAttribute.seatCol = this._seatCol;
-        seatAttribute.fill = this.fill;
-        return seatAttribute;
-    }
-
+    // --------------------------------------------------------------------------
     public get seatRow() {
         return this._seatRow;
     }
@@ -63,6 +57,17 @@ export class Seat extends EditorObject implements Capturable {
         this.addWithUpdate();
     }
 
+    // --------------------------------------------------------------------------
+    public override toEditingAttibute(): EditingAttribute {
+        const shapeAttribute = createShapeEditingAttribute(this as fabric.Object) as EditingAttribute;
+        const SeatEditingAttribute = (shapeAttribute as SeatEditingAttributes);
+        SeatEditingAttribute.type = "SeatEditingAttribute";
+        SeatEditingAttribute.seatRow = this._seatRow;
+        SeatEditingAttribute.seatCol = this._seatCol;
+        SeatEditingAttribute.fill = this.fill;
+        return shapeAttribute;
+    }
+
     // for ( toObject() data --> new instance  )
     public override get editorObjectData() {
         console.log("Seat: get editorObjectData() called");
@@ -82,6 +87,7 @@ export class Seat extends EditorObject implements Capturable {
         ]);
     }
 
+    // --------------------------------------------------------------------------
     public override toSVG(reviver?: Function | undefined): string {
         console.log("Seat : toSVG() called");
         // this._textObject.excludeFromExport = true;
@@ -92,14 +98,28 @@ export class Seat extends EditorObject implements Capturable {
         return SVG;
     }
 
-    public override toHTML(adjustment?: ExportAdjustment): string {
+    public override toTagsAndMappingData(adjustment?: PositionAdjustment | undefined): { tags: string[]; mappingData: SeatMappingData[]; } {
+        return {
+            tags: [this.toHTML(adjustment)],
+            mappingData: [
+                {
+                    id: this.getObjectId(),
+                    row: this.seatRow,
+                    col: this.seatCol,
+                    fill: this.fill, // 색상
+                }
+            ]
+        };
+    }
+
+    public override toHTML(adjustment?: PositionAdjustment): string {
 
         const rawShape = (this.constructNewCopy() as Seat);
 
         // center 기준 위치 조정.
         if (adjustment) {
-            const adjustedLeft = (rawShape.left) ? (rawShape.left - (adjustment.leftStart ?? 0)) : rawShape.left;
-            const adjustedTop = (rawShape.top) ? (rawShape.top - (adjustment.topStart ?? 0)) : rawShape.top;
+            const adjustedLeft = (rawShape.left) ? (rawShape.left - (adjustment.left ?? 0)) : rawShape.left;
+            const adjustedTop = (rawShape.top) ? (rawShape.top - (adjustment.top ?? 0)) : rawShape.top;
 
             rawShape.setOptions({
                 left: adjustedLeft,
@@ -107,34 +127,18 @@ export class Seat extends EditorObject implements Capturable {
             });
         } 
 
-        return (
-            `<a href="#" id="${this.getObjectId()} ">`
-            +
-            rawShape.toSVG()
-            +
-            "</a>"
+        return ( // 중요! copy한 shape의 id가 아닌 this의 id를 이용한다.
+            `<a href="#" id="${this.getObjectId()}">` + rawShape.toSVG() + "</a>"
         );
     }
 
-    public constructNewCopy() {
-        return new Seat(
-            this.baseShape,
-            this.seatRow,
-            this.seatCol,
-            {
-                fill: this.fill,
-                angle: this.angle,
-                left: this.left,
-                top: this.top,
-                originX: this.originX,
-                originY: this.originY,
-            },
-        )
-    }
+    // --------------------------------------------------------------------------
+    public override onRotating(): void {}
 
-    // ---------------------------------------------------------------------
-    public override onUpdate() {
-        console.log("Seat: onUpdate()");
+    public override onScaling(): void {}
+
+    public override onModified() {
+        console.log("Seat: onModified()");
 
         // reset angle of seat.
         const sectorAngle = this.group?.angle;
@@ -153,6 +157,26 @@ export class Seat extends EditorObject implements Capturable {
     }
 
     // ---------------------------------------------------------------------
+    public changeFillColor(color: string) {
+        this._shapeObject.setOptions({ fill: color });
+    }
+
+    public constructNewCopy() {
+        return new Seat(
+            this.baseShape,
+            this.seatRow,
+            this.seatCol,
+            {
+                fill: this.fill,
+                angle: this.angle,
+                left: this.left,
+                top: this.top,
+                originX: this.originX,
+                originY: this.originY,
+            },
+        )
+    }
+
     constructor (
         shapeType: string,
         row: number,
@@ -207,15 +231,9 @@ export class Seat extends EditorObject implements Capturable {
         if (options) {
             this.setOptions(options); // 객체 다 추가하고나서 option 대입 (ex. Angle 전체 적용)
         }
-        this.onUpdate();
-    }
-    // ---------------------------------------------------------------------
-    // for ( editing attribute input change --> instance update )
-    public changeFillColor(color: string) {
-        this._shapeObject.setOptions({ fill: color });
+        this.onModified();
     }
 
-    // ---------------------------------------------------------------------
     private _createLabel(): string {
         return `${this._seatRow?.toString() ?? "?"}-${this._seatCol?.toString() ?? "?"}`;
         // return `${this._seatCol?.toString() ?? "?"}`;

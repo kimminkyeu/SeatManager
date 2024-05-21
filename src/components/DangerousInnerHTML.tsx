@@ -2,15 +2,17 @@ import { useRef, useLayoutEffect, HTMLAttributes, useEffect } from 'react';
 
 interface Props extends HTMLAttributes<HTMLDivElement> {
     markup: string;
-    script: string;
+    // script: string;
 }
 
 // https://macarthur.me/posts/script-tags-in-react/
-export function DangerousInnerHtml({ markup, script, ...props }: Props) {
+// export function DangerousInnerHtml({ markup, script, ...props }: Props) {
+export function DangerousInnerHtml({ markup, ...props }: Props) {
 
-	const elRef = useRef<HTMLDivElement>();
+    /*
+    const elRef = useRef<HTMLDivElement>(); 
 
-	useLayoutEffect(() => {
+    useLayoutEffect(() => {
         const range = document.createRange();
         range.selectNode(elRef.current as any);
         const scriptWithTag = `<script id="__preview__">` + script + `</script>`;
@@ -22,23 +24,14 @@ export function DangerousInnerHtml({ markup, script, ...props }: Props) {
             elRef.current.innerHTML = "";
             elRef.current.append(documentFragment);
         }
-
-        return () => {
-            // const script = document.getElementById("__preview__");
-            // console.log("removing script...", script);
-            // if (elRef.current) {
-            // elRef.current.remove();
-            // documentFragment = null;
-                // elRef.current.removeChild());
-            // }
-        }
     }, []);
+    */
 
    return (
         <div
             {...props}
             id="html-preview"
-            ref={elRef as any}
+            // ref={elRef as any}
             dangerouslySetInnerHTML={{ __html: markup }}
         />
     );

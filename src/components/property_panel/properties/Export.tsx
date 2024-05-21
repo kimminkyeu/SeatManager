@@ -1,6 +1,5 @@
 import { Button } from "@/common-ui/ui/button";
-import { Checkbox } from "@/common-ui/ui/checkbox";
-
+import { DownloadIcon } from '@radix-ui/react-icons'
 
 interface ExportProps {
   handleExport: Function;
@@ -11,13 +10,12 @@ const Export = ({
 }: ExportProps
 ) => (
   <div className='flex flex-col gap-3 px-5 py-2'>
-    <h3>Export</h3>
     <Button
-      variant='outline'
+      variant='destructive'
       className='w-full'
       onClick={() => handleExport()}
     >
-      Export Map
+      <DownloadIcon className=" mr-2 h-4 w-4" /> JSON으로 내보내기
     </Button>
   </div>
 );

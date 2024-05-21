@@ -14,17 +14,15 @@ import { Assert } from "@/lib/assert";
 import { useImmer } from "use-immer";
 import { ObjectType, ObjectUtil } from "@/lib/type-check";
 import { Sector } from "@/types/sector.type";
-import { EditorObject, ExportAdjustment } from "@/types/editorObject.type";
+import { ReservableObject, PositionAdjustment, EditableObject } from "@/types/editorObject.type";
 
 import "@/preview.script";
 import { Venue } from "@/types/venue.type";
 import { Seat } from "@/types/seat.type";
 import _ from "lodash";
-
-// TODO: Panning + zoom 하면 마우스 포인터 이상해지는 문제 해결하기
-// TODO: Sector는 외곽선 색 + section text 표기를 같이 보여주자.
-// TODO: Export to Json같은 중요 버튼은 색을 주황색으로 주기
-
+import { SeatHtmlTag, ImageHtmlTag, SeatMapJsonFormat, SeatMappingData } from "@/types/export.type";
+import { saveStringToLocalDisk } from "@/lib/export";
+import SeatData from "./property_panel/properties/SeatData";
 
 // 추가적으로, https://github.com/fkhadra/react-contexify 이 라이브러리 써서 Custum Context Menu 구현합시다.
 // 아니면 https://github.com/anandsimmy/custom-context-menu/blob/main/src/MyCusomtContextMenu.js#L4 이 코드 참고해서 직접 해도 되고..
@@ -81,58 +79,166 @@ function Editor(): ReactElement {
     // 이건 기존 원본.
     const editingSectorRef = useRef<Sector | null>(null);
 
-    const exportToCustomFormat = (): any => {
-        Assert.Never("아직 미구현된 기능입니다.");
+    const createHtmlFromCanvas = (): string => {
+        const json = createJsonObjectFromCanvas();
+
+        let html = `<svg style=\"
+                    width:${json.venue.width}px; height:${json.venue.height}px; 
+                    border: 2px dashed;
+                    \">`;
+
+        json.seats.forEach((seatHtmlTags: string) => {
+            html += seatHtmlTags;
+        });
+        json.images.forEach((imageTags: string) => {
+            html += imageTags;
+        });
+        html += "</svg>";
+
+        // --------------------------------------
+        // run htmlPreviewHandler async
+        setTimeout(() => {
+            htmlPreviewHandler(json);
+        }, 50);
+        // --------------------------------------
+
+        return html;
     }
 
-    // --------------------------------------------------------------------
-    const createPreviewHtml = (): string => {
+    // executed after creatHtmlFromCanvas()
+    const htmlPreviewHandler = (json: SeatMapJsonFormat): void => {
 
-        const fabricCanvas = fabricCanvasRef.current;
-        Assert.NonNull(fabricCanvasRef, "fabricCanvas 객체가 없습니다!");;
-        const venue = venueObjectRef.current;
-        Assert.NonNull(venue, "Venue 객체가 없습니다!");;
+        const div = document.getElementById("preview-selected-seat-info");
 
-        // 렌더링될 div의 크기, 시작 지점 기준은 venue의 위치로 정한다.
-        const _w = venue.width;
-        const _h = venue.height;
-        const _l = venue.left;
-        const _t = venue.top;
-        const adjustment: ExportAdjustment = {
-            leftStart: _l,
-            topStart: _t,
+        const createText = () => {
+
         }
 
-        let html: string = "";
-        html += `<svg style=\"
-            width:${_w}px; height:${_h}px; 
-            border: 2px dashed;
-        \">
-        `;
-        fabricCanvas?.forEachObject((object: fabric.Object) => {
-            const type = ObjectUtil.getType(object);
-            // VENUE는 제외합니다.
-            if ((ObjectType.SEAT === type) || (ObjectType.SECTOR === type)) {
-                html += (object as EditorObject).toHTML(adjustment);
+        Array.from(json.mapping).forEach((seatData: SeatMappingData) => {
+            const seatElem = document.getElementById(seatData.id);
+            console.log(seatData.id, seatData.row, seatData.col, seatData.fill);
+
+            div && (div.innerText = `구역: [  ?  ] - 좌석: [ ? ]행 [ ? ]열`);
+
+            if (seatElem) {
+                const c = seatElem.getElementsByTagName('circle').item(0);
+
+                seatElem.onmouseover = () => {
+                    if (c) {
+                        if (false === c.classList.contains("toggle")) {
+                            c.style.fill = "#CD2121";
+                            c.classList.add("toggle");
+                        } else {
+                            c.style.fill = seatData.fill;
+                            c.classList.remove("toggle");
+                        }
+                    }
+                    div && (div.innerText = `구역: [${seatData.sectorId}] - 좌석: [${seatData.row}]행 [${seatData.col}]열`);
+                }
+
+                seatElem.onmouseout = () => {
+                    if (c) {
+                        if (false === c.classList.contains("toggle")) {
+                            c.style.fill = "#CD2121";
+                            c.classList.add("toggle");
+                        } else {
+                            c.style.fill = seatData.fill;
+                            c.classList.remove("toggle");
+                        }
+
+                        let text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                        text.textContent = `${seatData.row}`;
+                    }
+                    div && (div.innerText = `구역: [  ?  ] - 좌석: [ ? ]행 [ ? ]열`);
+                };
+
+                // tooltip.setAttribute('style', tooltipText)
+
+
+                // -----------------------------
+                // seatElem.onclick = () => {
+                //     const c = seatElem.getElementsByTagName('circle').item(0);
+                //     if (c) {
+                //         c.style.fill = '#cd2121';
+                //     }
+                // }
             }
+        });
+    }
+
+    const exportToCustomJsonFormat = () => {
+        const jsonObject = createJsonObjectFromCanvas();
+        const serialized = JSON.stringify(jsonObject, null, 4);
+        const fileName = `venue_${jsonObject.venue.id}.json`;
+        saveStringToLocalDisk(fileName, serialized);
+    }
+
+    /**
+     * @TODO 
+     * Venue 경계선을 벗어난 오브젝트는 SVG로 export될 필요가 없지 않을까...?
+     */
+    const createJsonObjectFromCanvas = (): SeatMapJsonFormat => {
+        const fabricCanvas = fabricCanvasRef.current;
+        Assert.NonNull(fabricCanvas, "fabricCanvas 객체가 없습니다!");
+        const venue = venueObjectRef.current;
+        Assert.NonNull(venue, "fabricCanvas 객체가 없습니다!");
+
+        const venueData = {
+            id: venue.venueId,
+            width: venue.width ?? 0,
+            height: venue.height ?? 0,
+        }
+        const seatMappingArray      : Array<SeatMappingData>   = [];
+        const seatHtmlTagArray      : Array<SeatHtmlTag>    = [];
+        const imagesHtmlTagArray    : Array<string>         = [];
+        
+        fabricCanvas.forEachObject((object: fabric.Object) => {
+
+            const type = ObjectUtil.getType(object);
+
+            // VENUE는 제외합니다. (only Reservable objects)
+            if (object instanceof ReservableObject) {
+
+                const ret = (object as ReservableObject).toTagsAndMappingData({
+                    left: venue.left,
+                    top: venue.top
+                })
+                seatMappingArray.push(...ret.mappingData);
+                seatHtmlTagArray.push(...ret.tags);
+                return;
+            }
+
+            // TODO: Fabric native 객체는 일단 아래와 같이 명시적으로 변환했지만,
+            //       나중엔 Image도 EditorObject로 만들 예정이다.
             if (ObjectType.FABRIC_IMAGE === type) {
 
                 // center 기준 위치 조정.
-                const adjustedLeft = (object.left) ? (object.left - (adjustment.leftStart ?? 0)) : object.left;
-                const adjustedTop = (object.top) ? (object.top - (adjustment.topStart ?? 0)) : object.top;
+                const adjustedLeft = (object.left) ? (object.left - (venue.left ?? 0)) : object.left;
+                const adjustedTop = (object.top) ? (object.top - (venue.top ?? 0)) : object.top;
+
                 // toSVG 위치 조정용.
                 const img = (object as fabric.Image);
                 const prevLeft = img.left;
                 const prevTop = img.top;
-                img.setOptions({left: adjustedLeft, top: adjustedTop});
-                html += img.toSVG();
-                img.setOptions({left: prevLeft, top: prevTop});
+
+                img.setOptions({left: adjustedLeft, top: adjustedTop}); // 위치 임시 조정.
+                imagesHtmlTagArray.push(img.toSVG());
+                img.setOptions({left: prevLeft, top: prevTop}); // 위치 원상 복구.
+
+                return;
             }
         });
-        html += "</svg>";
-        return html;
-    }
 
+        const resultingExportObject: SeatMapJsonFormat = {
+            venue: venueData,
+            seats: seatHtmlTagArray,
+            images: imagesHtmlTagArray,
+            mapping: seatMappingArray,
+        };
+
+        return resultingExportObject;
+    }
+  
     // --------------------------------------------------------------------
     const setObjectSelectable = (canvas: fabric.Canvas, _selectable: boolean) => {
         if (true === _selectable) {
@@ -512,8 +618,8 @@ function Editor(): ReactElement {
         fabricCanvas.on("object:modified", (options) => {
             console.log("fabric: [object:modified]");
             const target = options.target as fabric.Object;
-            if (ObjectUtil.isEditorObject(target)) {
-                (target as EditorObject).onUpdate();
+            if (target instanceof ReservableObject) {
+                (target as ReservableObject).onModified();
             }
         });
 
@@ -527,7 +633,7 @@ function Editor(): ReactElement {
              * @note 섹터 편집 모드에서 좌석이 삭제될 경우, 복구시 싱크를 맞춰야 한다.
              */
             if (true === isEditingModeRef.current) {
-                const removed = options.target as EditorObject;
+                const removed = options.target as ReservableObject;
                 Assert.NonNull(
                     editingSeatsRef.current,
                     "편집모드 중에는 editingSeatsRef가 반드시 존재해야 합니다!"
@@ -540,8 +646,8 @@ function Editor(): ReactElement {
             console.log("fabric: [object:rotating");
             // 내부 글자의 Angle을 회전시키기 위함.
             const target = options.target as fabric.Object;
-            if (ObjectUtil.isEditorObject(target)) {
-                (target as EditorObject).onRotate();
+            if (target instanceof EditableObject) {
+                (target as EditableObject).onRotating();
             }
         })
 
@@ -554,8 +660,8 @@ function Editor(): ReactElement {
                 setEditingElementUiAttributes,
             });
             const target = options.target as fabric.Object;
-            if (ObjectUtil.isEditorObject(target)) {
-                (target as EditorObject).onScale();
+            if (target instanceof EditableObject) {
+                (target as EditableObject).onScaling();
             }
         });
 
@@ -833,8 +939,9 @@ function Editor(): ReactElement {
                         setEditingElementUiAttributes={setEditingElementUiAttributes}
                         fabricRef={fabricCanvasRef}
                         keyboardEventDisableRef={keyboardEventDisableRef}
-                        createHtmlPreview={createPreviewHtml}
-                        exportToCustomFormat={exportToCustomFormat}
+                        createHtmlPreview={createHtmlFromCanvas}
+                        exportToCustomJsonFormat={exportToCustomJsonFormat}
+                        // htmlPreviewHandler={htmlPreviewHandler}
                     />
                 </section>
             </div>
