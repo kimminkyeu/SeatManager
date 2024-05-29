@@ -7,7 +7,7 @@ import { Assert } from "@/lib/assert";
 import { createText } from "@/lib/shapes";
 import { createShapeEditingAttribute } from "@/lib/canvas";
 import { ObjectType, ObjectUtil } from "@/lib/type-check";
-import { Capturable, ReservableObject, PositionAdjustment } from "./editorObject.type";
+import { Capturable, ExportableEditorObject, PositionAdjustment } from "./editorObject.type";
 import { cloneDeep } from "lodash";
 import { SeatMappingData } from "./export.type";
 
@@ -19,7 +19,7 @@ export interface SectorEditingAttribute extends Omit<ShapeEditingAttribute, 'typ
     sectorGapY: number;
 }
 
-export class Sector extends ReservableObject implements Capturable {
+export class Sector extends ExportableEditorObject implements Capturable {
     // ----------------------------------------
     private _sectorId: string; // sectorId
     private _gapX: number = 0; // sectorId

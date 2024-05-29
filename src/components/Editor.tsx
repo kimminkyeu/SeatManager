@@ -14,7 +14,7 @@ import { Assert } from "@/lib/assert";
 import { useImmer } from "use-immer";
 import { ObjectType, ObjectUtil } from "@/lib/type-check";
 import { Sector } from "@/types/sector.type";
-import { ReservableObject, PositionAdjustment, EditableObject } from "@/types/editorObject.type";
+import { ExportableEditorObject, PositionAdjustment, EditableObject } from "@/types/editorObject.type";
 
 import "@/preview.script";
 import { Venue } from "@/types/venue.type";
@@ -87,11 +87,11 @@ function Editor(): ReactElement {
                     border: 2px dashed;
                     \">`;
 
-        json.seats.forEach((seatHtmlTags: string) => {
-            html += seatHtmlTags;
-        });
         json.images.forEach((imageTags: string) => {
             html += imageTags;
+        });
+        json.seats.forEach((seatHtmlTags: string) => {
+            html += seatHtmlTags;
         });
         html += "</svg>";
 
@@ -109,10 +109,6 @@ function Editor(): ReactElement {
     const htmlPreviewHandler = (json: SeatMapJsonFormat): void => {
 
         const div = document.getElementById("preview-selected-seat-info");
-
-        const createText = () => {
-
-        }
 
         Array.from(json.mapping).forEach((seatData: SeatMappingData) => {
             const seatElem = document.getElementById(seatData.id);
@@ -196,10 +192,10 @@ function Editor(): ReactElement {
 
             const type = ObjectUtil.getType(object);
 
-            // VENUE는 제외합니다. (only Reservable objects)
-            if (object instanceof ReservableObject) {
+            // VENUE는 제외합니다. (only ExportableEditorObject objects)
+            if (object instanceof ExportableEditorObject) {
 
-                const ret = (object as ReservableObject).toTagsAndMappingData({
+                const ret = (object as ExportableEditorObject).toTagsAndMappingData({
                     left: venue.left,
                     top: venue.top
                 })
@@ -430,7 +426,7 @@ function Editor(): ReactElement {
 
             // ---- Tool: Single Object Creation (Text, Shape) -----------------------------
             default:
-                Assert.Never("현재 일반 객체 생성은 금지되어 있습니다. 개발중입니다.");
+                // Assert.Never("현재 일반 객체 생성은 금지되어 있습니다. 개발중입니다.");
 
                 selectedToolValueRef.current = toolElem?.value as string;
                 setObjectSelectable(fabricCanvasRef.current, false);
@@ -633,7 +629,7 @@ function Editor(): ReactElement {
              * @note 섹터 편집 모드에서 좌석이 삭제될 경우, 복구시 싱크를 맞춰야 한다.
              */
             if (true === isEditingModeRef.current) {
-                const removed = options.target as ReservableObject;
+                const removed = options.target as ExportableEditorObject;
                 Assert.NonNull(
                     editingSeatsRef.current,
                     "편집모드 중에는 editingSeatsRef가 반드시 존재해야 합니다!"

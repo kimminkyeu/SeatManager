@@ -7,6 +7,7 @@ import { SeatMappingData } from "./export.type";
 
 // Mixin type
 // https://devblogs.microsoft.com/typescript/announcing-typescript-2-2/
+
 export type Constructable = new (...args: any[]) => object;
 
 export function WithObjectId<BC extends Constructable>(Base: BC) {
@@ -21,7 +22,7 @@ export function WithObjectId<BC extends Constructable>(Base: BC) {
 /**
 * @interface Capturable
 * @description 
-* TODO: 작성 예정.
+* 편집 UI와 연동할 수 있는 Editing Attribute을 생성할 수 있도록 하는 Interface입니다.
 */
 export interface Capturable { 
     toEditingAttibute(): EditingAttribute;
@@ -63,7 +64,6 @@ export interface SeatExportable {
 }
 
 export interface Updatable {
-
     /** 
      * @description
      * Callback to be called on fabric's "object:modified" event.
@@ -85,10 +85,38 @@ export interface Updatable {
 
 /**
  * @description 
- * Every Editor object is a group object. (including text...)
+ * Editable object is a (fabric-group object with id).
  */
-
 export abstract class EditableObject extends WithObjectId(fabric.Group) implements Capturable, Updatable {
+   // Derived class ** MUST **  implement toEditingAttribute
+    public abstract toEditingAttibute(): any;
+
+    // Derived class ** MUST ** implement editorObjectData getter
+    public abstract get editorObjectData(): any;
+
+    // Derived class * Can * implement toObject() function
+    public override toObject(propertiesToInclude?: string[] | undefined): any {
+        propertiesToInclude?.push("editableObjectType");
+        propertiesToInclude?.push("baseShape");
+        return super.toObject(propertiesToInclude);
+    }
+
+    public get editableObjectType() {
+        return this._editorObjectType;
+    }
+
+    public get baseShape() {
+        return this._baseShape;
+    }
+
+    // Derived class * Can * implement onModified function
+    public onModified(): void {};
+
+    // Derived class * Can * implement onModified function
+    public onScaling(): void {};
+
+    // Derived class * Can * implement onModified function
+    public onRotating(): void {};
 
     // -------------------------------------------------------
     private readonly _baseShape: string; // circle, triangle...etc
@@ -99,102 +127,13 @@ export abstract class EditableObject extends WithObjectId(fabric.Group) implemen
         this._editorObjectType = editableObjectType;
         this._baseShape = baseShape;
     }
-
-    // Derived class ** MUST **  implement toEditingAttribute
-    public abstract toEditingAttibute(): any;
-
-    // Derived class ** MUST ** implement editorObjectData getter
-    public abstract get editorObjectData(): any;
-
-    // Derived class * can * implement toObject function
-    public override toObject(propertiesToInclude?: string[] | undefined): any {
-        console.log("ReservableObject : toObject() called");
-        propertiesToInclude?.push("editableObjectType");
-        propertiesToInclude?.push("baseShape");
-        return super.toObject(propertiesToInclude);
-    }
-
-    public get editableObjectType() {
-        return this._editorObjectType;
-    }
-
-    public get baseShape() {
-        return this._baseShape;
-    }
-
-    // -------------------------------------------------------
-    // Derived class * can * implement onModified function
-    public onModified(): void {};
-
-    // Derived class * can * implement onModified function
-    public onScaling(): void {};
-
-    // Derived class * can * implement onModified function
-    public onRotating(): void {};
 }
 
-export abstract class ReservableObject extends EditableObject implements SeatExportable {
+export abstract class ExportableEditorObject extends EditableObject implements SeatExportable {
 
-    // -------------------------------------------------------
     // Derived class ** MUST ** implement toHTML
     public abstract toHTML(adjustment?: PositionAdjustment): string;
 
     // Derived class ** MUST ** implement toHTML
     public abstract toTagsAndMappingData(adjustment?: PositionAdjustment): { tags: Array<string>, mappingData: Array<SeatMappingData> };
-
-    // public abstract toMappingData(): Array<SeatMappingData>;
 }
-
-/*
-export abstract class ReservableObject extends WithObjectId(fabric.Group) implements Capturable, Exportable, Updatable {
-
-    private readonly _baseShape: string; // circle, triangle...etc
-    private readonly _editorObjectType: string; // sector, seat, ...etc... IMPORTANT
-
-    constructor(editableObjectType: string, baseShape: string, options?: IGroupOptions) {
-        super(undefined, options);
-        this._editorObjectType = editableObjectType;
-        this._baseShape = baseShape;
-    }
-
-    // Derived class ** MUST ** implement toHTML
-    public abstract toHTML(adjustment?: PositionAdjustment): string;
-
-    // Derived class ** MUST ** implement toHTML
-    public abstract toTags(adjustment?: PositionAdjustment): Array<string>;
-
-    // Derived class ** MUST ** implement toHTML
-    public abstract toMappingData(): string[];
-
-    // Derived class ** MUST **  implement toEditingAttribute
-    public abstract toEditingAttibute(): any;
-
-    // Derived class ** MUST ** implement editorObjectData getter
-    public abstract get editorObjectData(): any;
-
-    // Derived class * can * implement onModified function
-    public onModified(): void {};
-
-    // Derived class * can * implement onModified function
-    public onScaling(): void {};
-
-    // Derived class * can * implement onModified function
-    public onRotating(): void {};
-
-    // Derived class * can * implement toObject function
-    public override toObject(propertiesToInclude?: string[] | undefined): any {
-        console.log("ReservableObject : toObject() called");
-        propertiesToInclude?.push("editableObjectType");
-        propertiesToInclude?.push("baseShape");
-        return super.toObject(propertiesToInclude);
-    } 
-    public get editableObjectType() {
-        return this._editorObjectType;
-    }
-
-    public get baseShape() {
-        return this._baseShape;
-    }
-}
-*/
-

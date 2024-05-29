@@ -7,7 +7,7 @@ import { COLORS, SEAT_HEIGHT, SEAT_WIDTH } from "@/constants";
 import { createShapeEditingAttribute } from "@/lib/canvas";
 import { ObjectType } from "@/lib/type-check";
 import { createShape, createText } from "@/lib/shapes";
-import { Capturable, ReservableObject, PositionAdjustment, SeatExportable } from "./editorObject.type";
+import { Capturable, ExportableEditorObject, PositionAdjustment, SeatExportable } from "./editorObject.type";
 import { SeatMappingData } from "./export.type";
 
 // Omit : https://stackoverflow.com/questions/48215950/exclude-property-from-type
@@ -17,7 +17,7 @@ export interface SeatEditingAttributes extends Omit<ShapeEditingAttribute, 'type
     seatCol?: number | undefined,
 }
 
-export class Seat extends ReservableObject implements Capturable {
+export class Seat extends ExportableEditorObject implements Capturable {
     // -----------------------------------------------------------------
     private _seatRow: number;
     private _seatCol: number;

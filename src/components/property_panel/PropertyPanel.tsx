@@ -14,7 +14,7 @@ import { SectorEditingAttribute } from "@/types/sector.type";
 import { SeatEditingAttributes } from "@/types/seat.type";
 import { twJoin } from "tailwind-merge";
 import { ObjectType, ObjectUtil } from "@/lib/type-check";
-import { ReservableObject } from "@/types/editorObject.type";
+import { ExportableEditorObject } from "@/types/editorObject.type";
 import HtmlPreview from "./properties/HtmlPreview";
 import { Updater } from "use-immer";
 import { Separator } from "@/common-ui/ui/separator";
