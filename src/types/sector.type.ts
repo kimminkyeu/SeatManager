@@ -7,9 +7,9 @@ import { Assert } from "@/lib/assert";
 import { createText } from "@/lib/shapes";
 import { createShapeEditingAttribute } from "@/lib/canvas";
 import { ObjectType, ObjectUtil } from "@/lib/type-check";
-import { Capturable, CompressedObjectData, ExportableEditorObject, PositionAdjustment } from "./editorObject.type";
+import { Capturable, ExportableEditorObject, PositionAdjustment } from "./editorObject.type";
 import { cloneDeep } from "lodash";
-import { SeatMappingData } from "./export.type";
+import { SeatExport, SeatMappingData, SectorExport } from "./export.type";
 
 // Omit : https://stackoverflow.com/questions/48215950/exclude-property-from-type
 export interface SectorEditingAttribute extends Omit<ShapeEditingAttribute, 'type'> {
@@ -120,14 +120,24 @@ export class Sector extends ExportableEditorObject implements Capturable {
         return SVG;
     }
 
-    // public override toHTML(adjustment?: PositionAdjustment): string {
-    //     let html = "";
-    //     this._collectDataFromEachSeat((seat) => {
-    //         html += (seat.toHTML(adjustment) + '\n');
-    //     })
-    //     return html;
-    // }
+    public override export(adjustment?: PositionAdjustment): SectorExport {
+        const seats: Array<SeatExport<any>> = [];
 
+        this._collectDataFromEachSeat(
+            seat => seats.push(seat.export(adjustment))
+        )
+
+        const exported: SectorExport = {
+            sectorId: this.sectorId,
+            seats: seats,
+            // price: this.price,
+        }
+        return exported;
+    }
+
+    /**
+     *  @deprecated 
+    */
     public override toCompressedObjectData(adjustment?: PositionAdjustment | undefined): Array<CircleSeatObjectData> {
         // array of internal seat object
         const seatDataArray: Array<CircleSeatObjectData> = [];
@@ -143,7 +153,9 @@ export class Sector extends ExportableEditorObject implements Capturable {
         return seatDataArray;
     }
 
-    // !!!
+    /**
+     *  @deprecated 
+    */
     public override toTagsAndMappingData(adjustment?: PositionAdjustment | undefined): { tags: string[]; mappingData: SeatMappingData[]; } {
 
         const tags: Array<string> = [];
@@ -351,11 +363,10 @@ export class Sector extends ExportableEditorObject implements Capturable {
 
     /**
      * @description
-     * (1) 생성자들 통해 좌석을 자동으로 생성한 Sector이고, (생성자에 row, col을 입력한 경우)
-     * (2) 그 상태에서 편집모드를 한번도 거치지 않았다면
-     *      => true를 반환합니다.
+     * 편집모드를 거치는 과정에서 seatRow seatCol 개수는 0이 됩니다.
+     * 따라서 편집모드를 거쳤다면 true를 반환합니다.
      */
-    private _isAutoSeatGeneratedSector() {
+    private _isEditedSector() {
         return (this._seatRowCount === 0 || this._seatColCount === 0);
     }
 
@@ -363,8 +374,8 @@ export class Sector extends ExportableEditorObject implements Capturable {
         collector: (seat: Seat) => void, // for html tag
     ) {
 
-        // (1) 이 경우는 편집모드를 거친 Sector다.
-        if (true === this._isAutoSeatGeneratedSector()) {
+        // (1) 이 경우는 편집모드를 거친 Sector.
+        // if (true === this._isEditedSector()) {
             const raw = cloneDeep(this)
             const dest = raw.destroy() as Sector;
             dest.getSeats().forEach((obj: fabric.Object) => {
@@ -374,23 +385,23 @@ export class Sector extends ExportableEditorObject implements Capturable {
                 }
             });
             return;
-        }
+        // }
 
-        // (2) 이 경우는 편집모드를 안거친 Sector다. 따라서 내부 생성자로 좌석을 생성한다.
-        const raw2: Sector = (this.constructNewCopy());
-        raw2.setOptions({
-            left: raw2.left! - raw2.width! / 2,
-            top: raw2.top! - raw2.height! / 2,
-        });
+        // (1) 이 경우는 편집모드를 거치지 않은 Sector
+        // const raw2: Sector = (this.constructNewCopy());
+        // raw2.setOptions({
+        //     left: raw2.left! - raw2.width! / 2,
+        //     top: raw2.top! - raw2.height! / 2,
+        // });
 
-        const destroyed = raw2.destroy();
-        (destroyed as Sector).getSeats().forEach((obj: fabric.Object) => {
-            if (ObjectType.SEAT === ObjectUtil.getType(obj)) {
-                Assert.True(obj instanceof Seat);
-                collector(obj as Seat);
-            }
-        });
-        return;
+        // const destroyed = raw2.destroy();
+        // (destroyed as Sector).getSeats().forEach((obj: fabric.Object) => {
+        //     if (ObjectType.SEAT === ObjectUtil.getType(obj)) {
+        //         Assert.True(obj instanceof Seat);
+        //         collector(obj as Seat);
+        //     }
+        // });
+        // return;
     }
 
 

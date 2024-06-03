@@ -1,14 +1,14 @@
 // import { createSeat } from "@/lib/seat";
 import { EditingAttribute, ModifyShape, ShapeEditingAttribute } from "./canvas.type";
 import { fabric } from "fabric";
-import { IGroupOptions, IObjectOptions, IObservable } from "fabric/fabric-impl";
+import { Circle, IGroupOptions, IObjectOptions, IObservable, Rect } from "fabric/fabric-impl";
 import { Assert } from "@/lib/assert";
 import { COLORS, SEAT_HEIGHT, SEAT_WIDTH } from "@/constants";
 import { createShapeEditingAttribute } from "@/lib/canvas";
-import { ObjectType } from "@/lib/type-check";
+import { ObjectType, ObjectUtil } from "@/lib/type-check";
 import { createShape, createText } from "@/lib/shapes";
 import { Capturable, ExportableEditorObject, PositionAdjustment, SeatExportable } from "./editorObject.type";
-import { SeatMappingData } from "./export.type";
+import { CircleShapeExport, RectangleShapeExport, SeatExport, SeatMappingData, eShapeExportType } from "./export.type";
 
 export interface CircleSeatObjectData {
     cx: number;
@@ -20,6 +20,7 @@ export interface CircleSeatObjectData {
     seatCol: number;
     sectorId?: string;
 }
+
 
 // Omit : https://stackoverflow.com/questions/48215950/exclude-property-from-type
 export interface SeatEditingAttributes extends Omit<ShapeEditingAttribute, 'type'> {
@@ -98,16 +99,69 @@ export class Seat extends ExportableEditorObject implements Capturable {
         ]);
     }
 
-    // --------------------------------------------------------------------------
-    // public override toSVG(reviver?: Function | undefined): string {
-    //     // this.remove(this._textObject);
-    //     // const SVG = super.toSVG();
-    //     // this.add(this._textObject);
-    //     return SVG;
-    // }
+    public override export(adjustment?: PositionAdjustment): SeatExport<any> | never {
+        const innerShape = this._cloneAsDestoryedShapeObject(adjustment);
 
-    // TODO: 다양한 도형 타입을 지원하기 위해 리팩토링이 필요함...
-    public toCompressedObjectData(adjustment?: PositionAdjustment): CircleSeatObjectData {
+        switch (innerShape.type) {
+            /** 
+             *  NOTE: 현재는 Circle, Rectangle 좌석만 지원합니다.
+             */
+            // ---------------------------------------------
+            case (ObjectType.FABRIC_CIRCLE):
+                const innerCircle = (innerShape as Circle);
+                const exported_1: SeatExport<CircleShapeExport> = {
+                    seatId: this.getObjectId(),
+                    seatRow: this.seatRow,
+                    seatCol: this.seatCol,
+                    seatShape: {
+                        type: eShapeExportType.CIRCLE,
+                        fill: innerCircle.fill as string,
+                        cx: innerCircle.getCenterPoint().x,
+                        cy: innerCircle.getCenterPoint().y,
+                        r: innerCircle.getRadiusX(),
+                    }
+                };
+                return exported_1;
+
+            // ---------------------------------------------
+            case (ObjectType.FABRIC_RECT):
+                const innerRect = (innerShape as Rect);
+
+                Assert.NonNull(innerRect.left, "좌석 내부 도형의 left가 null입니다");
+                Assert.NonNull(innerRect.top, "좌석 내부 도형의 top이 null입니다");
+                Assert.NonNull(innerRect.width, "좌석 내부 도형의 width가 null입니다");
+                Assert.NonNull(innerRect.height, "좌석 내부 도형의 height가 null입니다");
+
+                const exported_2: SeatExport<RectangleShapeExport> = {
+                    seatId: this.getObjectId(),
+                    seatRow: this.seatRow,
+                    seatCol: this.seatCol,
+                    seatShape: {
+                        type: eShapeExportType.RECTANGLE,
+                        fill: innerRect.fill as string,
+                        x: innerRect.left,
+                        y: innerRect.top,
+                        width: innerRect.width,
+                        height: innerRect.height,
+
+                        rx: innerRect.rx,
+                        ry: innerRect.ry,
+                        angle: innerRect.angle,
+                    }
+                };
+                return exported_2;
+
+            // ---------------------------------------------
+            default:
+                Assert.Never(`지원하지 않는 좌석 Shape입니다. shape: ${innerShape.type}`);
+                return {} as never;
+        }
+    }
+
+    /**
+     * @deprecated
+     */
+    public override toCompressedObjectData(adjustment?: PositionAdjustment): CircleSeatObjectData {
         const raw = this._getRawShapeCircleDestroyed(adjustment);
         Assert.True(raw.getRadiusX() === raw.getRadiusY(), "일단 둘이 같은 형태여야 한다...");
 
@@ -123,15 +177,18 @@ export class Seat extends ExportableEditorObject implements Capturable {
         return compressedCircle;
     }
 
+    /**
+     * @deprecated
+     */
     public override toTagsAndMappingData(adjustment?: PositionAdjustment | undefined): { tags: string[]; mappingData: SeatMappingData[]; } {
         return {
             tags: [this._toSVG_internal(adjustment)],
             mappingData: [
                 {
-                    id: this.getObjectId(),
-                    row: this.seatRow,
-                    col: this.seatCol,
-                    fill: this.fill, // 색상
+                    seatId: this.getObjectId(),
+                    seatRow: this.seatRow,
+                    seatCol: this.seatCol,
+                    // fill: this.fill, // 색상
                 }
             ]
         };
@@ -160,6 +217,29 @@ export class Seat extends ExportableEditorObject implements Capturable {
         );
     }
 
+    /**
+     * @description
+     * Seat을 깊은 복사한 후, Group에 묶여있던 위치 속성값을 해제(destroy)하고 내부 Shape을 반환합니다.
+     */
+    private _cloneAsDestoryedShapeObject(adjustment?: PositionAdjustment): fabric.Object {
+
+        const copiedSeat = (this.constructNewCopy() as Seat);
+        // center 기준 위치 조정.
+        if (adjustment) {
+            const adjustedLeft = (copiedSeat.left) ? (copiedSeat.left - (adjustment.left ?? 0)) : copiedSeat.left;
+            const adjustedTop = (copiedSeat.top) ? (copiedSeat.top - (adjustment.top ?? 0)) : copiedSeat.top;
+
+            copiedSeat.setOptions({
+                left: adjustedLeft,
+                top: adjustedTop,
+            });
+        }
+        return (copiedSeat.destroy() as Seat)._shapeObject; 
+    }
+
+    /**
+     * @deprecated
+     */
     private _getRawShapeCircleDestroyed(adjustment?: PositionAdjustment): fabric.Circle {
         const copiedSeat = (this.constructNewCopy() as Seat);
         // center 기준 위치 조정.

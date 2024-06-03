@@ -37,35 +37,16 @@ export interface PositionAdjustment {
 }
 
 export interface SeatExportable {
-    // /**
-    //  * @description 
-    //  * 객체의 상태를 렌더링 가능한 HTML string으로 변환합니다.
-    //  * 내부 오브젝트 (ex. 구역 내 좌석들)은 1개의 html string에 통합 반환됩니다.
-    //  * 
-    //  * @param adjustment 
-    //  * Export할 때 오브젝트의 position 시작 기준점을 적용할 수 있습니다.
-    //  * 예를 들어, adjustment-leftStart가 10라면, 원래 left가 30일 경우 20으로 수정합니다.
-    //  */
-    // toHTML(adjustment?: PositionAdjustment): string;
-
-    /**
-     * @description
-     * toHTML이 통합된 문자열을 반환한다면, toTags는 내부 오브젝트(ex. 구역 내 좌석)
-     * 들의 HTML 태그를 배열로 반환합니다.
-     * 
-     * @param adjustment 
-     * Export할 때 오브젝트의 position 시작 기준점을 적용할 수 있습니다.
-     * 예를 들어, adjustment-leftStart가 10라면, 원래 left가 30일 경우 20으로 수정합니다.
-     * 
-     * 또 toTags의 id 값을 이용해서 객체의 정보를 조회할 수 있도록 데이터를 반환합니다.
-     */
-    toTagsAndMappingData(adjustment?: PositionAdjustment): { tags: Array<string>, mappingData: Array<SeatMappingData> };
-
     /**
      * @description
      * 서버에 저장하기 위한 최소 데이터로 serialize export
+     * 
+     * @param adjustment
+     * Export할 때 오브젝트의 position 시작 기준점을 적용할 수 있습니다.
+     * 예를 들어, adjustment-leftStart가 10라면, 원래 left가 30일 경우 20으로 수정합니다.
+     *
      */
-    toCompressedObjectData(adjustment?: PositionAdjustment): any;
+    export(adjustment?: PositionAdjustment): any; // FINAL VERSION!
 }
 
 export interface Updatable {
@@ -136,12 +117,18 @@ export abstract class EditableObject extends WithObjectId(fabric.Group) implemen
 
 export abstract class ExportableEditorObject extends EditableObject implements SeatExportable {
 
-    // Derived class ** MUST ** implement toHTML
-    // public abstract toHTML(adjustment?: PositionAdjustment): string;
-
-    // Derived class ** MUST ** implement toHTML
+    /**
+     * @deprecated
+     * 레거시 함수입니다. 이제 사용하지 않습니다.
+     */
     public abstract toTagsAndMappingData(adjustment?: PositionAdjustment): { tags: Array<string>, mappingData: Array<SeatMappingData> };
 
-    // Derived class ** MUST ** implement toHTML
+    /**
+    * @deprecated
+    * 레거시 함수입니다. 이제 사용하지 않습니다.
+    */
     public abstract toCompressedObjectData(adjustment?: PositionAdjustment): any;
+
+
+    public abstract export(adjustment?: PositionAdjustment): any; // FINAL VERSION!
 }

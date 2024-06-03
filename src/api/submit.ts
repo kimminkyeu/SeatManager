@@ -1,9 +1,9 @@
-import { SeatMapJsonFormat } from "@/types/export.type";
+import { SeatMapJsonForFrontendRendering } from "@/types/export.type";
 
 
 const API_URL = "http://localhost:8080";
 
-export async function submitSeatmapToServer(seatmap: SeatMapJsonFormat) {
+export async function submitSeatmapToServer(seatmap: SeatMapJsonForFrontendRendering) {
     const requestUrl = `${API_URL}/seatmap`;
 
 

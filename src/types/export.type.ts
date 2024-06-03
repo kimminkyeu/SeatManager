@@ -17,8 +17,9 @@
 
 import { CircleSeatObjectData } from "./seat.type";
 
-export interface SeatMapJsonFormat {
-    venue   : { id: string, width: number, height: number };
+// 이건 서버용이다. 그저 테스트용임.
+export interface SeatMapJsonForFrontendRendering {
+    venue   : { venueId: string, divElementWidth: number, divElementHeight: number };
     seats   : Array<SeatHtmlTag>;
     images  : Array<ImageHtmlTag>
     mapping : Array<SeatMappingData>;
@@ -33,14 +34,90 @@ export interface SeatMapJsonCompressedFormat {
 }
 
 export type SeatMappingData = { 
-    id  : string,            /* 좌석 Unique 식별자  */
-    row : number,            /* 구역 내 행 번호     */
-    col : number,            /* 구역 내 열 번호     */
-    fill : string, // 좌석 색상.
+    seatId  : string,            /* 좌석 Unique 식별자  */
+    seatRow : number,            /* 구역 내 행 번호     */
+    seatCol : number,            /* 구역 내 열 번호     */
     sectorId? : string,      /* 구역 이름.         */
+    // fill : string, // 좌석 색상. --> removed!!
     /* price: number, */     /* Ex. 좌석 금액      */
     /* type: number,  */     /* Ex. 좌석 등급      */
 };
 
 export type SeatHtmlTag = string; 
 export type ImageHtmlTag = string;
+
+
+// ---------------------------------------------------------------------
+export enum eShapeExportType {
+    CIRCLE,
+    RECTANGLE,
+    IMAGE,
+    // ...
+}
+
+export interface ShapeExport {
+    type: eShapeExportType
+}
+
+export interface HTMLSelectable extends ShapeExport {
+    fill: string; // base color to be rendered
+    // onSelect: () => void;
+}
+
+export interface CircleShapeExport extends HTMLSelectable {
+    cx: number; // center x
+    cy: number; // center y
+    r: number;  // radius
+}
+
+export interface RectangleShapeExport extends HTMLSelectable {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+
+    rx?: number; // Optional
+    ry?: number; // Optional
+    angle?: number; // Optional
+}
+
+export interface ImageExport extends ShapeExport {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    base64Jpeg: string; // encoded base64 image
+
+    // opacity: number;
+    // scaleX: number; // img.toDataURL 할때, scaleX값 기준으로 다운 샘플링이 자동으로 적용된다.
+    // scaleY: number;
+
+    angle?: number;
+}
+
+export interface SeatExport<BaseShape extends HTMLSelectable> {
+    seatId: string;
+    seatRow: number;
+    seatCol: number; 
+    seatShape: BaseShape;
+}
+
+export interface SectorExport {
+    sectorId: string;
+    seats: SeatExport<HTMLSelectable & {}>[];
+    // price: number; // 섹터는 모두 같은 가격을 가진다.
+}
+
+export interface SeatMap {
+    venueId: string;
+    width: number;
+    height: number;
+    sectors: SectorExport[];
+    images: ImageExport[];
+}
+
+// ----------------------------------------------------
+
+
+
+

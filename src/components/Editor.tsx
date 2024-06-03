@@ -20,8 +20,8 @@ import "@/preview.script";
 import { Venue } from "@/types/venue.type";
 import { CircleSeatObjectData, Seat } from "@/types/seat.type";
 import _ from "lodash";
-import { SeatHtmlTag, ImageHtmlTag, SeatMapJsonFormat, SeatMappingData, SeatMapJsonCompressedFormat } from "@/types/export.type";
-import { saveStringToLocalDisk } from "@/lib/export";
+import { SeatHtmlTag, ImageHtmlTag, SeatMapJsonForFrontendRendering, SeatMappingData, SeatMapJsonCompressedFormat } from "@/types/export.type";
+import { setSeatmapPreviewPageEvent_v1, saveStringToLocalDisk } from "@/lib/export";
 import SeatData from "./property_panel/properties/SeatData";
 
 // 추가적으로, https://github.com/fkhadra/react-contexify 이 라이브러리 써서 Custum Context Menu 구현합시다.
@@ -72,7 +72,7 @@ function Editor(): ReactElement {
 
     const isEditingModeRef = useRef<boolean>(false);
 
-    const venueObjectRef = useRef<Venue | null>(null);
+    const venueRef = useRef<Venue | null>(null);
 
     // 편집 모드에서 현재 섹터와 연관된 Seat들을 저장하는 곳. 편집 모드를 끄면 Sector로 재구성하기 위함.
     const editingSeatsRef = useRef< Map<string, Seat> | null>(null);
@@ -80,6 +80,7 @@ function Editor(): ReactElement {
     const editingSectorRef = useRef<Sector | null>(null);
 
     // NOTE: 버전2. 압축 버전을 이용한 HTML 렌더링
+    /** @deprecated */
     const createHtmlFromCanvasV2Compressed = (): string => {
         const json = createCompressedJsonObjectFromCanvas();
 
@@ -105,6 +106,7 @@ function Editor(): ReactElement {
         return html;
     }
 
+    /** @deprecated */
     const htmlPreviewHandlerV2 = (json: SeatMapJsonCompressedFormat): void => {
         const div = document.getElementById("preview-selected-seat-info");
 
@@ -141,11 +143,12 @@ function Editor(): ReactElement {
     }
 
     // ----------------------------------------------------------
+    /** @deprecated */
     const createHtmlFromCanvasV1 = (): string => {
         const json = createJsonObjectFromCanvas();
 
         let html = `<svg style=\"
-                    width:${json.venue.width}px; height:${json.venue.height}px; 
+                    width:${json.venue.divElementWidth}px; height:${json.venue.divElementHeight}px; 
                     border: 2px dashed;
                     \">`;
 
@@ -160,7 +163,7 @@ function Editor(): ReactElement {
         // --------------------------------------
         // run htmlPreviewHandler async
         setTimeout(() => {
-            htmlPreviewHandlerV1(json);
+            setSeatmapPreviewPageEvent_v1(json);
         }, 50);
         // --------------------------------------
 
@@ -168,59 +171,16 @@ function Editor(): ReactElement {
     }
 
 
-    // NOTE: 버전1. 비압축 버전을 이용한 HTML 렌더링
-    const htmlPreviewHandlerV1 = (json: SeatMapJsonFormat): void => {
 
-        const div = document.getElementById("preview-selected-seat-info");
-
-        Array.from(json.mapping).forEach((seatData: SeatMappingData) => {
-            const seatElem = document.getElementById(seatData.id);
-            console.log(seatData.id, seatData.row, seatData.col, seatData.fill);
-
-            div && (div.innerText = `구역: [  ?  ] - 좌석: [ ? ]행 [ ? ]열`);
-
-            if (seatElem) {
-                const c = seatElem.getElementsByTagName('circle').item(0);
-
-                seatElem.onmouseover = () => {
-                    if (c) {
-                        if (false === c.classList.contains("toggle")) {
-                            c.style.fill = "#CD2121";
-                            c.classList.add("toggle");
-                        } else {
-                            c.style.fill = seatData.fill;
-                            c.classList.remove("toggle");
-                        }
-                    }
-                    div && (div.innerText = `구역: [${seatData.sectorId}] - 좌석: [${seatData.row}]행 [${seatData.col}]열`);
-                }
-
-                seatElem.onmouseout = () => {
-                    if (c) {
-                        if (false === c.classList.contains("toggle")) {
-                            c.style.fill = "#CD2121";
-                            c.classList.add("toggle");
-                        } else {
-                            c.style.fill = seatData.fill;
-                            c.classList.remove("toggle");
-                        }
-
-                        let text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                        text.textContent = `${seatData.row}`;
-                    }
-                    div && (div.innerText = `구역: [  ?  ] - 좌석: [ ? ]행 [ ? ]열`);
-                };
-            }
-        });
-    }
-
+    /** @deprecated */
     const exportToCustomJsonFormat = () => {
         const jsonObject = createJsonObjectFromCanvas();
         const serialized = JSON.stringify(jsonObject, null, 4);
-        const fileName = `venue_${jsonObject.venue.id}.json`;
+        const fileName = `venue_${jsonObject.venue.venueId}.json`;
         saveStringToLocalDisk(fileName, serialized);
     }
 
+    /** @deprecated */
     const exportToCustomCompressedJsonFormat = () => {
         const jsonObject = createCompressedJsonObjectFromCanvas();
         const serialized = JSON.stringify(jsonObject, null, 4);
@@ -228,10 +188,11 @@ function Editor(): ReactElement {
         saveStringToLocalDisk(fileName, serialized);
     }
 
+    /** @deprecated */
     const createCompressedJsonObjectFromCanvas = (): SeatMapJsonCompressedFormat => {
         const fabricCanvas = fabricCanvasRef.current;
         Assert.NonNull(fabricCanvas, "fabricCanvas 객체가 없습니다!");
-        const venue = venueObjectRef.current;
+        const venue = venueRef.current;
         Assert.NonNull(venue, "fabricCanvas 객체가 없습니다!");
 
         const venueData = {
@@ -283,19 +244,19 @@ function Editor(): ReactElement {
     }
 
     /**
-     * @TODO 
-     * Venue 경계선을 벗어난 오브젝트는 SVG로 export될 필요가 없지 않을까...?
+     * @deprecated
+     * 구버전입니다.
      */
-    const createJsonObjectFromCanvas = (): SeatMapJsonFormat => {
+    const createJsonObjectFromCanvas = (): SeatMapJsonForFrontendRendering => {
         const fabricCanvas = fabricCanvasRef.current;
         Assert.NonNull(fabricCanvas, "fabricCanvas 객체가 없습니다!");
-        const venue = venueObjectRef.current;
+        const venue = venueRef.current;
         Assert.NonNull(venue, "fabricCanvas 객체가 없습니다!");
 
         const venueData = {
-            id: venue.venueId,
-            width: venue.width ?? 0,
-            height: venue.height ?? 0,
+            venueId: venue.venueId,
+            divElementWidth: venue.width ?? 0,
+            divElementHeight: venue.height ?? 0,
         }
         const seatMappingArray      : Array<SeatMappingData>   = [];
         const seatHtmlTagArray      : Array<SeatHtmlTag>    = [];
@@ -317,8 +278,13 @@ function Editor(): ReactElement {
                 return;
             }
 
+            // TODO: 이미지를 그룹화해서 Export하면 ???
+
             // TODO: Fabric native 객체는 일단 아래와 같이 명시적으로 변환했지만,
-            //       나중엔 Image도 EditorObject로 만들 예정이다.
+            //       나중엔 Image도 EditorObject로 만들어야 한다...!
+
+
+
             if (ObjectType.FABRIC_IMAGE === type) {
 
                 // center 기준 위치 조정.
@@ -332,13 +298,14 @@ function Editor(): ReactElement {
 
                 img.setOptions({left: adjustedLeft, top: adjustedTop}); // 위치 임시 조정.
                 imagesHtmlTagArray.push(img.toSVG());
+                console.log(img.toObject());
                 img.setOptions({left: prevLeft, top: prevTop}); // 위치 원상 복구.
 
                 return;
             }
         });
 
-        const resultingExportObject: SeatMapJsonFormat = {
+        const resultingExportObject: SeatMapJsonForFrontendRendering = {
             venue: venueData,
             seats: seatHtmlTagArray,
             images: imagesHtmlTagArray,
@@ -644,7 +611,7 @@ function Editor(): ReactElement {
         fabricCanvasRef.current.add(venue);
         fabricCanvasRef.current.centerObject(venue);
         fabricCanvasRef.current.requestRenderAll();
-        venueObjectRef.current = venue;
+        venueRef.current = venue;
 
         // -----------------------------------------------------------------
         fabricCanvas.on("selection:created", function (options: fabric.IEvent) {
@@ -1044,10 +1011,13 @@ function Editor(): ReactElement {
                         />
                     </div>
                     <PropertyPanel
+                        keyboardEventDisableRef={keyboardEventDisableRef}
                         editingElementUiAttributes={editingElementUiAttributes}
                         setEditingElementUiAttributes={setEditingElementUiAttributes}
+                        // -------------------------------------------------
                         fabricRef={fabricCanvasRef}
-                        keyboardEventDisableRef={keyboardEventDisableRef}
+                        venueRef={venueRef}
+                        // -------------------------------------------------
                         createHtmlPreview={createHtmlFromCanvasV1}
                         exportToCustomJsonFormat={exportToCustomJsonFormat}
                         createJsonObjectFromCanvas={createJsonObjectFromCanvas}

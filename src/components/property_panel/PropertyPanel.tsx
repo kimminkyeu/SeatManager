@@ -19,35 +19,45 @@ import HtmlPreview from "./properties/HtmlPreview";
 import { Updater } from "use-immer";
 import { Separator } from "@/common-ui/ui/separator";
 import VenueData from "./properties/VenueData";
-import { VenueEditingAttributes } from "@/types/venue.type";
+import { Venue, VenueEditingAttributes } from "@/types/venue.type";
 import Submit from "./properties/Submit";
-import { SeatMapJsonCompressedFormat, SeatMapJsonFormat } from "@/types/export.type";
+import { SeatMapJsonCompressedFormat, SeatMapJsonForFrontendRendering } from "@/types/export.type";
+import { createHtmlView_MimicFrontend, createSeatMapV1, renderTags_MimicServer, setSeatmapPreviewPageEvent_v1, setSeatmapPreviewPageEvent_v2 } from "@/lib/export";
+import { Assert } from "@/lib/assert";
 
 
 export type RightSidebarProps = {
+  keyboardEventDisableRef: React.MutableRefObject<boolean>;
   editingElementUiAttributes: EditingAttribute | null;
   setEditingElementUiAttributes: Updater<EditingAttribute | null>
+
   fabricRef: React.RefObject<fabric.Canvas | null>;
-  keyboardEventDisableRef: React.MutableRefObject<boolean>;
+  venueRef: React.MutableRefObject<Venue | null>
+
   exportToCustomJsonFormat: () => void;
   exportToCustomCompressedJsonFormat: Function;
   createHtmlPreview: () => string;
   createHtmlPreviewWithCompressedData: Function;
-  createJsonObjectFromCanvas: () => SeatMapJsonFormat;
+  createJsonObjectFromCanvas: () => SeatMapJsonForFrontendRendering;
   createCompressedJsonObjectFromCanvas: () => SeatMapJsonCompressedFormat;
 };
 
 const PropertyPanel = ({
+  keyboardEventDisableRef,
+
   editingElementUiAttributes,
   setEditingElementUiAttributes,
+
   fabricRef,
-  keyboardEventDisableRef,
+  venueRef,
+
   exportToCustomJsonFormat,
   exportToCustomCompressedJsonFormat,
   createHtmlPreview,
   createHtmlPreviewWithCompressedData,
   createJsonObjectFromCanvas,
   createCompressedJsonObjectFromCanvas
+
 }: RightSidebarProps) => {
 
   const colorInputRef = useRef(null);
@@ -134,36 +144,66 @@ const PropertyPanel = ({
 
         <Separator />
 
+
+        {/* ---------------------------------------------- */}
+        <Export
+          handleExport={exportToCustomJsonFormat}
+          label="JSON으로 내보내기 (비압축)"
+        />
         <HtmlPreview
           createHtmlPreview={createHtmlPreview}
           label="HTML 미리보기 (비압축)"
         />
-
-        <Export
-          handleExport={exportToCustomJsonFormat}
-          label="JSON으로 내보내기"
-        />
-
-
         <Submit
           createJsonFromCanvas={createJsonObjectFromCanvas}
-          label="서버로 제출하기 V1(SVG)"
+          label="서버로 제출하기 (비압축)"
         />
 
 
         {/* ---------------------------------------------- */}
         <Export
           handleExport={exportToCustomCompressedJsonFormat}
-          label="압축 Export 테스트"
+          label="JSON으로 내보내기 (압축v1)"
         />
         <HtmlPreview
           createHtmlPreview={createHtmlPreviewWithCompressedData}
-          label="압축 HTML 변환"
+          label="HTML 미리보기 (압축v1)"
         />
         {/* <Submit 
           createJsonFromCanvas={createCompressedJsonObjectFromCanvas} 
           label="서버로 제출하기 V2(압축)"
         /> */}
+
+
+        {/* ---------------------------------------------- */}
+        <Export
+          label="JSON으로 내보내기 (압축v2)"
+          handleExport={() => {
+            Assert.NonNull(fabricRef.current);
+            Assert.NonNull(venueRef.current);
+            const seatMap = createSeatMapV1(fabricRef.current, venueRef.current)
+            console.log(seatMap);
+          }}
+        />
+        <HtmlPreview
+          label="HTML 미리보기 (압축v2)"
+          createHtmlPreview={() => {
+            Assert.NonNull(fabricRef.current);
+            Assert.NonNull(venueRef.current);
+            const seatMap = createSeatMapV1(fabricRef.current, venueRef.current);
+            const renderedTags = renderTags_MimicServer(seatMap);
+            const html = createHtmlView_MimicFrontend(renderedTags);
+            setTimeout(() => {
+              setSeatmapPreviewPageEvent_v2(renderedTags);
+            }, 50);
+            return html;
+          }}
+        />
+        {/* <Submit 
+          createJsonFromCanvas={createCompressedJsonObjectFromCanvas} 
+          label="서버로 제출하기 V2(압축)"
+        /> */}
+
 
       </section>
     ),
