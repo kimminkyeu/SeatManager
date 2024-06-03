@@ -18,9 +18,9 @@ import { ExportableEditorObject, PositionAdjustment, EditableObject } from "@/ty
 
 import "@/preview.script";
 import { Venue } from "@/types/venue.type";
-import { Seat } from "@/types/seat.type";
+import { CircleSeatObjectData, Seat } from "@/types/seat.type";
 import _ from "lodash";
-import { SeatHtmlTag, ImageHtmlTag, SeatMapJsonFormat, SeatMappingData } from "@/types/export.type";
+import { SeatHtmlTag, ImageHtmlTag, SeatMapJsonFormat, SeatMappingData, SeatMapJsonCompressedFormat } from "@/types/export.type";
 import { saveStringToLocalDisk } from "@/lib/export";
 import SeatData from "./property_panel/properties/SeatData";
 
@@ -79,7 +79,69 @@ function Editor(): ReactElement {
     // 이건 기존 원본.
     const editingSectorRef = useRef<Sector | null>(null);
 
-    const createHtmlFromCanvas = (): string => {
+    // NOTE: 버전2. 압축 버전을 이용한 HTML 렌더링
+    const createHtmlFromCanvasV2Compressed = (): string => {
+        const json = createCompressedJsonObjectFromCanvas();
+
+        let html = `<svg style=\"
+        width:${json.venue.width}px; height:${json.venue.height}px; 
+        border: 2px dashed;
+        \">\n`;
+
+        json.seats.forEach((seat: CircleSeatObjectData) => {
+            const circle = `<circle id="${seat.seatId}" r="${seat.r}" cx="${seat.cx}" cy="${seat.cy}" fill="${seat.fill}" />\n`
+            html += circle;
+        })
+        html += "</svg>";
+
+        console.log(html);
+        // --------------------------------------
+        // run htmlPreviewHandler async
+        setTimeout(() => {
+            htmlPreviewHandlerV2(json);
+        }, 50);
+        // --------------------------------------
+
+        return html;
+    }
+
+    const htmlPreviewHandlerV2 = (json: SeatMapJsonCompressedFormat): void => {
+        const div = document.getElementById("preview-selected-seat-info");
+
+        Array.from(json.seats).forEach((seatData: CircleSeatObjectData) => {
+            const seatElem = document.getElementById(seatData.seatId);
+
+            div && (div.innerText = `구역: [  ?  ] - 좌석: [ ? ]행 [ ? ]열`);
+            if (seatElem) {
+                seatElem.onmouseover = () => {
+                    if (false === seatElem.classList.contains("toggle")) {
+                        seatElem.style.fill = "#CD2121";
+                        seatElem.classList.add("toggle");
+                    } else {
+                        seatElem.style.fill = seatData.fill;
+                        seatElem.classList.remove("toggle");
+                    }
+                    div && (div.innerText = `구역: [${seatData.sectorId}] - 좌석: [${seatData.seatRow}]행 [${seatData.seatCol}]열`);
+                }
+
+                seatElem.onmouseout = () => {
+                    if (false === seatElem.classList.contains("toggle")) {
+                        seatElem.style.fill = "#CD2121";
+                        seatElem.classList.add("toggle");
+                    } else {
+                        seatElem.style.fill = seatData.fill;
+                        seatElem.classList.remove("toggle");
+                    }
+                    let text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    text.textContent = `${seatData.seatRow}`;
+                    div && (div.innerText = `구역: [  ?  ] - 좌석: [ ? ]행 [ ? ]열`);
+                };
+            }
+        });
+    }
+
+    // ----------------------------------------------------------
+    const createHtmlFromCanvasV1 = (): string => {
         const json = createJsonObjectFromCanvas();
 
         let html = `<svg style=\"
@@ -98,15 +160,16 @@ function Editor(): ReactElement {
         // --------------------------------------
         // run htmlPreviewHandler async
         setTimeout(() => {
-            htmlPreviewHandler(json);
+            htmlPreviewHandlerV1(json);
         }, 50);
         // --------------------------------------
 
         return html;
     }
 
-    // executed after creatHtmlFromCanvas()
-    const htmlPreviewHandler = (json: SeatMapJsonFormat): void => {
+
+    // NOTE: 버전1. 비압축 버전을 이용한 HTML 렌더링
+    const htmlPreviewHandlerV1 = (json: SeatMapJsonFormat): void => {
 
         const div = document.getElementById("preview-selected-seat-info");
 
@@ -147,17 +210,6 @@ function Editor(): ReactElement {
                     }
                     div && (div.innerText = `구역: [  ?  ] - 좌석: [ ? ]행 [ ? ]열`);
                 };
-
-                // tooltip.setAttribute('style', tooltipText)
-
-
-                // -----------------------------
-                // seatElem.onclick = () => {
-                //     const c = seatElem.getElementsByTagName('circle').item(0);
-                //     if (c) {
-                //         c.style.fill = '#cd2121';
-                //     }
-                // }
             }
         });
     }
@@ -167,6 +219,67 @@ function Editor(): ReactElement {
         const serialized = JSON.stringify(jsonObject, null, 4);
         const fileName = `venue_${jsonObject.venue.id}.json`;
         saveStringToLocalDisk(fileName, serialized);
+    }
+
+    const exportToCustomCompressedJsonFormat = () => {
+        const jsonObject = createCompressedJsonObjectFromCanvas();
+        const serialized = JSON.stringify(jsonObject, null, 4);
+        const fileName = `venue_${jsonObject.venue.id}.json`;
+        saveStringToLocalDisk(fileName, serialized);
+    }
+
+    const createCompressedJsonObjectFromCanvas = (): SeatMapJsonCompressedFormat => {
+        const fabricCanvas = fabricCanvasRef.current;
+        Assert.NonNull(fabricCanvas, "fabricCanvas 객체가 없습니다!");
+        const venue = venueObjectRef.current;
+        Assert.NonNull(venue, "fabricCanvas 객체가 없습니다!");
+
+        const venueData = {
+            id: venue.venueId,
+            width: venue.width ?? 0,
+            height: venue.height ?? 0,
+        }
+
+        const seatCompressedDataArray: Array<CircleSeatObjectData> = [];
+
+        fabricCanvas.forEachObject((object: fabric.Object) => {
+
+            const type = ObjectUtil.getType(object);
+
+            // VENUE는 제외합니다. (only ExportableEditorObject objects)
+            if (object instanceof ExportableEditorObject) {
+
+                const ret = (object as ExportableEditorObject).toCompressedObjectData({
+                    left: venue.left,
+                    top: venue.top
+                });
+                seatCompressedDataArray.push(...ret);
+                return;
+            }
+
+            if (ObjectType.FABRIC_IMAGE === type) {
+                // center 기준 위치 조정.
+                const adjustedLeft = (object.left) ? (object.left - (venue.left ?? 0)) : object.left;
+                const adjustedTop = (object.top) ? (object.top - (venue.top ?? 0)) : object.top;
+
+                // toSVG 위치 조정용.
+                const img = (object as fabric.Image);
+                const prevLeft = img.left;
+                const prevTop = img.top;
+
+                img.setOptions({ left: adjustedLeft, top: adjustedTop }); // 위치 임시 조정.
+                console.log(img.toObject());
+                img.setOptions({ left: prevLeft, top: prevTop }); // 위치 원상 복구.
+
+                return;
+            }
+        });
+
+        const resultingExportObject: SeatMapJsonCompressedFormat = {
+            venue: venueData,
+            seats: seatCompressedDataArray,
+        };
+        return resultingExportObject;
     }
 
     /**
@@ -935,9 +1048,12 @@ function Editor(): ReactElement {
                         setEditingElementUiAttributes={setEditingElementUiAttributes}
                         fabricRef={fabricCanvasRef}
                         keyboardEventDisableRef={keyboardEventDisableRef}
-                        createHtmlPreview={createHtmlFromCanvas}
+                        createHtmlPreview={createHtmlFromCanvasV1}
                         exportToCustomJsonFormat={exportToCustomJsonFormat}
-                        // htmlPreviewHandler={htmlPreviewHandler}
+                        createJsonObjectFromCanvas={createJsonObjectFromCanvas}
+                        createCompressedJsonObjectFromCanvas={createCompressedJsonObjectFromCanvas}
+                        createHtmlPreviewWithCompressedData={createHtmlFromCanvasV2Compressed}
+                        exportToCustomCompressedJsonFormat={exportToCustomCompressedJsonFormat}
                     />
                 </section>
             </div>

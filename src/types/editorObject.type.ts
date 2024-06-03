@@ -37,16 +37,16 @@ export interface PositionAdjustment {
 }
 
 export interface SeatExportable {
-    /**
-     * @description 
-     * 객체의 상태를 렌더링 가능한 HTML string으로 변환합니다.
-     * 내부 오브젝트 (ex. 구역 내 좌석들)은 1개의 html string에 통합 반환됩니다.
-     * 
-     * @param adjustment 
-     * Export할 때 오브젝트의 position 시작 기준점을 적용할 수 있습니다.
-     * 예를 들어, adjustment-leftStart가 10라면, 원래 left가 30일 경우 20으로 수정합니다.
-     */
-    toHTML(adjustment?: PositionAdjustment): string;
+    // /**
+    //  * @description 
+    //  * 객체의 상태를 렌더링 가능한 HTML string으로 변환합니다.
+    //  * 내부 오브젝트 (ex. 구역 내 좌석들)은 1개의 html string에 통합 반환됩니다.
+    //  * 
+    //  * @param adjustment 
+    //  * Export할 때 오브젝트의 position 시작 기준점을 적용할 수 있습니다.
+    //  * 예를 들어, adjustment-leftStart가 10라면, 원래 left가 30일 경우 20으로 수정합니다.
+    //  */
+    // toHTML(adjustment?: PositionAdjustment): string;
 
     /**
      * @description
@@ -61,6 +61,11 @@ export interface SeatExportable {
      */
     toTagsAndMappingData(adjustment?: PositionAdjustment): { tags: Array<string>, mappingData: Array<SeatMappingData> };
 
+    /**
+     * @description
+     * 서버에 저장하기 위한 최소 데이터로 serialize export
+     */
+    toCompressedObjectData(adjustment?: PositionAdjustment): any;
 }
 
 export interface Updatable {
@@ -132,8 +137,11 @@ export abstract class EditableObject extends WithObjectId(fabric.Group) implemen
 export abstract class ExportableEditorObject extends EditableObject implements SeatExportable {
 
     // Derived class ** MUST ** implement toHTML
-    public abstract toHTML(adjustment?: PositionAdjustment): string;
+    // public abstract toHTML(adjustment?: PositionAdjustment): string;
 
     // Derived class ** MUST ** implement toHTML
     public abstract toTagsAndMappingData(adjustment?: PositionAdjustment): { tags: Array<string>, mappingData: Array<SeatMappingData> };
+
+    // Derived class ** MUST ** implement toHTML
+    public abstract toCompressedObjectData(adjustment?: PositionAdjustment): any;
 }

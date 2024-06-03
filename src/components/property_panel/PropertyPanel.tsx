@@ -20,6 +20,8 @@ import { Updater } from "use-immer";
 import { Separator } from "@/common-ui/ui/separator";
 import VenueData from "./properties/VenueData";
 import { VenueEditingAttributes } from "@/types/venue.type";
+import Submit from "./properties/Submit";
+import { SeatMapJsonCompressedFormat, SeatMapJsonFormat } from "@/types/export.type";
 
 
 export type RightSidebarProps = {
@@ -28,8 +30,11 @@ export type RightSidebarProps = {
   fabricRef: React.RefObject<fabric.Canvas | null>;
   keyboardEventDisableRef: React.MutableRefObject<boolean>;
   exportToCustomJsonFormat: () => void;
+  exportToCustomCompressedJsonFormat: Function;
   createHtmlPreview: () => string;
-  // htmlPreviewHandler: () => void;
+  createHtmlPreviewWithCompressedData: Function;
+  createJsonObjectFromCanvas: () => SeatMapJsonFormat;
+  createCompressedJsonObjectFromCanvas: () => SeatMapJsonCompressedFormat;
 };
 
 const PropertyPanel = ({
@@ -38,8 +43,11 @@ const PropertyPanel = ({
   fabricRef,
   keyboardEventDisableRef,
   exportToCustomJsonFormat,
+  exportToCustomCompressedJsonFormat,
   createHtmlPreview,
-  // htmlPreviewHandler,
+  createHtmlPreviewWithCompressedData,
+  createJsonObjectFromCanvas,
+  createCompressedJsonObjectFromCanvas
 }: RightSidebarProps) => {
 
   const colorInputRef = useRef(null);
@@ -128,11 +136,34 @@ const PropertyPanel = ({
 
         <HtmlPreview
           createHtmlPreview={createHtmlPreview}
-        // htmlHandler={htmlPreviewHandler} 
+          label="HTML 미리보기 (비압축)"
         />
 
-        <Export handleExport={exportToCustomJsonFormat} />
+        <Export
+          handleExport={exportToCustomJsonFormat}
+          label="JSON으로 내보내기"
+        />
 
+
+        <Submit
+          createJsonFromCanvas={createJsonObjectFromCanvas}
+          label="서버로 제출하기 V1(SVG)"
+        />
+
+
+        {/* ---------------------------------------------- */}
+        <Export
+          handleExport={exportToCustomCompressedJsonFormat}
+          label="압축 Export 테스트"
+        />
+        <HtmlPreview
+          createHtmlPreview={createHtmlPreviewWithCompressedData}
+          label="압축 HTML 변환"
+        />
+        {/* <Submit 
+          createJsonFromCanvas={createCompressedJsonObjectFromCanvas} 
+          label="서버로 제출하기 V2(압축)"
+        /> */}
 
       </section>
     ),

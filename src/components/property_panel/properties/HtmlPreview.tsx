@@ -15,12 +15,13 @@ import { isObject } from "lodash";
 
  interface HtmlPreviewProps {
   createHtmlPreview: Function;
+  label: string;
   // htmlHandler: () => void;
 }
 
 export function HtmlPreview({
   createHtmlPreview,
-  // htmlHandler
+  label,
 }: HtmlPreviewProps) {
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -58,7 +59,7 @@ export function HtmlPreview({
           <Button
             className=" w-full"
           >
-            <EyeOpenIcon className=" mr-2 h-4 w-4"/> 예약화면 미리보기
+            <EyeOpenIcon className=" mr-2 h-4 w-4"/> {label}
           </Button>
         </DialogTrigger>
         <DialogContent className=" w-4/5 min-h-[90vh] ">

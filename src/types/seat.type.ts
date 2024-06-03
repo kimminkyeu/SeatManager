@@ -10,6 +10,17 @@ import { createShape, createText } from "@/lib/shapes";
 import { Capturable, ExportableEditorObject, PositionAdjustment, SeatExportable } from "./editorObject.type";
 import { SeatMappingData } from "./export.type";
 
+export interface CircleSeatObjectData {
+    cx: number;
+    cy: number;
+    r: number;
+    fill: string;
+    seatId: string;
+    seatRow: number;
+    seatCol: number;
+    sectorId?: string;
+}
+
 // Omit : https://stackoverflow.com/questions/48215950/exclude-property-from-type
 export interface SeatEditingAttributes extends Omit<ShapeEditingAttribute, 'type'> {
     type: "SeatEditingAttribute";
@@ -88,19 +99,33 @@ export class Seat extends ExportableEditorObject implements Capturable {
     }
 
     // --------------------------------------------------------------------------
-    public override toSVG(reviver?: Function | undefined): string {
-        console.log("Seat : toSVG() called");
-        // this._textObject.excludeFromExport = true;
-        this.remove(this._textObject);
-        const SVG = super.toSVG();
-        this.add(this._textObject);
-        // this._textObject.excludeFromExport = false;
-        return SVG;
+    // public override toSVG(reviver?: Function | undefined): string {
+    //     // this.remove(this._textObject);
+    //     // const SVG = super.toSVG();
+    //     // this.add(this._textObject);
+    //     return SVG;
+    // }
+
+    // TODO: 다양한 도형 타입을 지원하기 위해 리팩토링이 필요함...
+    public toCompressedObjectData(adjustment?: PositionAdjustment): CircleSeatObjectData {
+        const raw = this._getRawShapeCircleDestroyed(adjustment);
+        Assert.True(raw.getRadiusX() === raw.getRadiusY(), "일단 둘이 같은 형태여야 한다...");
+
+        const compressedCircle = {
+            cx: raw.getCenterPoint().x,
+            cy: raw.getCenterPoint().y,
+            r: raw.getRadiusX(),
+            fill: raw.fill as string,
+            seatRow: this.seatRow,
+            seatCol: this.seatCol,
+            seatId: this.getObjectId(),
+        }
+        return compressedCircle;
     }
 
     public override toTagsAndMappingData(adjustment?: PositionAdjustment | undefined): { tags: string[]; mappingData: SeatMappingData[]; } {
         return {
-            tags: [this.toHTML(adjustment)],
+            tags: [this._toSVG_internal(adjustment)],
             mappingData: [
                 {
                     id: this.getObjectId(),
@@ -112,24 +137,43 @@ export class Seat extends ExportableEditorObject implements Capturable {
         };
     }
 
-    public override toHTML(adjustment?: PositionAdjustment): string {
+    // toSVG는 이미 고정된 파라미터가 있기 때문에... 새롭게 정의
+    private _toSVG_internal(adjustment?: PositionAdjustment): string {
 
-        const rawShape = (this.constructNewCopy() as Seat);
-
+        const copiedSeat = (this.constructNewCopy() as Seat);
         // center 기준 위치 조정.
         if (adjustment) {
-            const adjustedLeft = (rawShape.left) ? (rawShape.left - (adjustment.left ?? 0)) : rawShape.left;
-            const adjustedTop = (rawShape.top) ? (rawShape.top - (adjustment.top ?? 0)) : rawShape.top;
+            const adjustedLeft = (copiedSeat.left) ? (copiedSeat.left - (adjustment.left ?? 0)) : copiedSeat.left;
+            const adjustedTop = (copiedSeat.top) ? (copiedSeat.top - (adjustment.top ?? 0)) : copiedSeat.top;
 
-            rawShape.setOptions({
+            copiedSeat.setOptions({
                 left: adjustedLeft,
                 top: adjustedTop,
             });
         } 
+        const destroyed = copiedSeat.destroy() as Seat;
+
+        console.log(destroyed._shapeObject.toObject());
 
         return ( // 중요! copy한 shape의 id가 아닌 this의 id를 이용한다.
-            `<a href="#" id="${this.getObjectId()}">` + rawShape.toSVG() + "</a>"
+            `<a href="#" id="${this.getObjectId()}">` + destroyed._shapeObject.toSVG() + "</a>"
         );
+    }
+
+    private _getRawShapeCircleDestroyed(adjustment?: PositionAdjustment): fabric.Circle {
+        const copiedSeat = (this.constructNewCopy() as Seat);
+        // center 기준 위치 조정.
+        if (adjustment) {
+            const adjustedLeft = (copiedSeat.left) ? (copiedSeat.left - (adjustment.left ?? 0)) : copiedSeat.left;
+            const adjustedTop = (copiedSeat.top) ? (copiedSeat.top - (adjustment.top ?? 0)) : copiedSeat.top;
+
+            copiedSeat.setOptions({
+                left: adjustedLeft,
+                top: adjustedTop,
+            });
+        }
+        const destroyed = copiedSeat.destroy() as Seat;
+        return destroyed._shapeObject as fabric.Circle;
     }
 
     // --------------------------------------------------------------------------

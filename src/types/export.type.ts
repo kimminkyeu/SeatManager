@@ -15,11 +15,21 @@
  * html 좌석 tag에 매칭되는 id 문자열과 row, col 정보들 (--IMPORTANT--)
  */
 
+import { CircleSeatObjectData } from "./seat.type";
+
 export interface SeatMapJsonFormat {
     venue   : { id: string, width: number, height: number };
     seats   : Array<SeatHtmlTag>;
     images  : Array<ImageHtmlTag>
     mapping : Array<SeatMappingData>;
+}
+
+// 오직 필요한 데이터만 수집 (일단 원형 데이터만...)
+export interface SeatMapJsonCompressedFormat {
+    venue   : { id: string, width: number, height: number };
+    seats   : Array<CircleSeatObjectData>;
+    // TODO: 이미지도 여기에 추가.
+    // 매핑 정보는 여기엔 필요가 없다.
 }
 
 export type SeatMappingData = { 

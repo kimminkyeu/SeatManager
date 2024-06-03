@@ -1,13 +1,13 @@
 import { Gradient, IGroupOptions, IObjectOptions, Pattern } from "fabric/fabric-impl";
 import { ShapeEditingAttribute, EditingAttribute } from "./canvas.type";
 import { COLORS, SEAT_HEIGHT, SEAT_WIDTH } from "@/constants";
-import { Seat } from "./seat.type";
+import { Seat, CircleSeatObjectData } from "./seat.type";
 import { fabric } from "fabric";
 import { Assert } from "@/lib/assert";
 import { createText } from "@/lib/shapes";
 import { createShapeEditingAttribute } from "@/lib/canvas";
 import { ObjectType, ObjectUtil } from "@/lib/type-check";
-import { Capturable, ExportableEditorObject, PositionAdjustment } from "./editorObject.type";
+import { Capturable, CompressedObjectData, ExportableEditorObject, PositionAdjustment } from "./editorObject.type";
 import { cloneDeep } from "lodash";
 import { SeatMappingData } from "./export.type";
 
@@ -120,16 +120,31 @@ export class Sector extends ExportableEditorObject implements Capturable {
         return SVG;
     }
 
-    public override toHTML(adjustment?: PositionAdjustment): string {
-        let html = "";
-        this._collectDataFromEachSeat((seat) => {
-            html += (seat.toHTML(adjustment) + '\n');
-        })
-        return html;
+    // public override toHTML(adjustment?: PositionAdjustment): string {
+    //     let html = "";
+    //     this._collectDataFromEachSeat((seat) => {
+    //         html += (seat.toHTML(adjustment) + '\n');
+    //     })
+    //     return html;
+    // }
+
+    public override toCompressedObjectData(adjustment?: PositionAdjustment | undefined): Array<CircleSeatObjectData> {
+        // array of internal seat object
+        const seatDataArray: Array<CircleSeatObjectData> = [];
+
+        this._collectDataFromEachSeat(
+            (seat) => {
+                const seatData = seat.toCompressedObjectData(adjustment);
+                seatData.sectorId = this.sectorId;
+                seatDataArray.push(seatData);
+            }
+        )
+
+        return seatDataArray;
     }
 
     // !!!
-    public toTagsAndMappingData(adjustment?: PositionAdjustment | undefined): { tags: string[]; mappingData: SeatMappingData[]; } {
+    public override toTagsAndMappingData(adjustment?: PositionAdjustment | undefined): { tags: string[]; mappingData: SeatMappingData[]; } {
 
         const tags: Array<string> = [];
         const mappingData: Array<SeatMappingData> = [];
@@ -344,9 +359,6 @@ export class Sector extends ExportableEditorObject implements Capturable {
         return (this._seatRowCount === 0 || this._seatColCount === 0);
     }
 
-    /**
-     * @description 같은 오브젝트 아이디를 두개의 collector가 공유하기 위해서, 동시에 전달함...
-     */
     private _collectDataFromEachSeat(
         collector: (seat: Seat) => void, // for html tag
     ) {
