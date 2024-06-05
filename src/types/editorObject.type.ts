@@ -72,6 +72,7 @@ export interface Updatable {
 /**
  * @description 
  * Editable object is a (fabric-group object with id).
+ * this includes capabillity to export as React State.
  */
 export abstract class EditableObject extends WithObjectId(fabric.Group) implements Capturable, Updatable {
    // Derived class ** MUST **  implement toEditingAttribute
