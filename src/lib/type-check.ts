@@ -2,6 +2,7 @@ import { SeatMapObject } from "@/types/editorObject.type";
 import { fabric } from "fabric";
 
 export const FabricObjectTypeConstants = {
+    UNDEFINED: "undefined",
     FABRIC_GROUP: "group",
     FABRIC_TEXT: "i-text",
     FABRIC_IMAGE: "image",

@@ -206,23 +206,20 @@ export class Sector extends ExportableSeatMapObject implements EditableStateExtr
                     left: options?.left,
                     top: options?.top,
                 },
-                innerShapeOptions: {
-                    width: options?.width,
-                    height: options?.height,
-                    strokeWidth: 1,
-                    stroke: options?.fill ?? `#000000`,
-                    originX: 'left',
-                    originY: 'top',
-                    fill: `rgba(0,0,0,0)`, // default fill is transparent color
-                },
-                innerTextOptions: {
-                    text: `Sector: ${sectorId}`,
-                    originX: 'left',
-                    originY: 'top',
-                    // left: options?.left ? options?.left + (Sector._staticFontSize) : (Sector._staticFontSize),
-                    // left: options?.left ? options?.left : 0,
-                    // top: options?.top ? options?.top : 0,
-                },
+                // innerShapeOptions: {
+                //     width: options?.width,
+                //     height: options?.height,
+                //     strokeWidth: 1,
+                //     stroke: options?.fill ?? `#000000`,
+                //     originX: 'left',
+                //     originY: 'top',
+                //     fill: `rgba(0,0,0,0)`, // default fill is transparent color
+                // },
+                // innerTextOptions: {
+                //     text: `Sector: ${sectorId}`,
+                //     originX: 'left',
+                //     originY: 'top',
+                // },
                 controlVisibilityOptions: {
                     mtr: true, // show rotation
                     mt: false,
@@ -304,15 +301,6 @@ export class Sector extends ExportableSeatMapObject implements EditableStateExtr
             originX: "left",
             originY: "top",
         });
-
-        // console.log(this.width);
-        // update innerShape (rect)
-        // console.log(this.getBoundingRect().width);
-        // this._innerShape.setOptions({
-            // width: this.getBoundingRect().width,
-            // width: this.width,
-        // })
-        this._innerShape.setOptions({ width: 1000 });
     }
 
     private _applyGapYandUpdate(newGapY: number) {
@@ -341,11 +329,6 @@ export class Sector extends ExportableSeatMapObject implements EditableStateExtr
             // originX: "center",
             // originY: "center",
         });
-
-        // update innerShape (rect)
-        this._innerShape.setOptions({
-            width: this.width,
-        })
     }
 
     /**

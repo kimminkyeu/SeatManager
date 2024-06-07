@@ -8,6 +8,7 @@ import { FabricObjectTypeConstants, SeatMapObjectTypeConstants } from "@/lib/typ
 import { EditableSeatMapObject, SeatMapObjectOptions } from "./editorObject.type";
 import { Assert } from "@/lib/assert";
 import { IGroupOptions } from "fabric/fabric-impl";
+import assert from "assert";
 
 
 // Omit : https://stackoverflow.com/questions/48215950/exclude-property-from-type
@@ -75,6 +76,8 @@ export class Venue extends EditableSeatMapObject {
 
     public override AfterFabricObjectModifiedEvent(): void {
         // recreate inner text object
+        Assert.NonNull(this._innerLabelText);
+
         this.removeWithUpdate(this._innerLabelText);
         const text = this._createInternalFabricObject(
             FabricObjectTypeConstants.FABRIC_TEXT,
@@ -84,12 +87,14 @@ export class Venue extends EditableSeatMapObject {
             } as fabric.ITextOptions,
         );
         this.add(text); // update bounding box
+
         this._innerLabelText = text as fabric.Text;
 
         this._innerLabelText.setOptions({
             left: -(this.width! / 2) + (Venue._staticFontSize),
             top: -(this.height! / 2) + (Venue._staticFontSize),
         });
+
         this.addWithUpdate();
     }
 
@@ -104,6 +109,14 @@ export class Venue extends EditableSeatMapObject {
             SeatMapObjectTypeConstants.VENUE,
             FabricObjectTypeConstants.FABRIC_RECT,
             {
+                groupOptions: {
+                    left: options?.left,
+                    top: options?.top,
+                    lockRotation: true,
+                    opacity: 0.8,
+                    originX: 'left',
+                    originY: 'top',
+                },
                 innerShapeOptions: {
                     width: width,
                     height: height,
@@ -115,15 +128,11 @@ export class Venue extends EditableSeatMapObject {
                 innerTextOptions: {
                     text: `Venue: ${venueId}`,
                     fontSize: Venue._staticFontSize,
+                    // originX: 'left',
+                    // originY: 'top',
                     left: options?.left ? options?.left + (Venue._staticFontSize) : 0,
                     top: options?.top ? options?.top + (Venue._staticFontSize) : 0,
-                },
-                groupOptions: {
-                    left: options?.left,
-                    top: options?.top,
-                    lockRotation: true,
-                    opacity: 0.8,
-                },
+                }, 
                 controlVisibilityOptions: {
                     mtr: false, // hide rotation
                     mt: true,
@@ -139,5 +148,6 @@ export class Venue extends EditableSeatMapObject {
         );
 
         this._venueId = venueId;
+        this.AfterFabricObjectModifiedEvent();
     }
 }

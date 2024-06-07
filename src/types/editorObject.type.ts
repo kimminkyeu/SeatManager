@@ -115,8 +115,8 @@ export abstract class SeatMapObject extends WithObjectId(fabric.Group) implement
     // -------------------------------------------------------
     // Shape & Labeled Text
     protected readonly _seatMapObjectType: string; /* sector, seat, ...etc... IMPORTANT */
-    protected _innerShape: fabric.Object; // circle, triangle...etc
-    protected _innerLabelText: fabric.Text; // label hint
+    protected _innerShape?: fabric.Object; // circle, triangle...etc
+    protected _innerLabelText?: fabric.Text; // label hint
 
     constructor(
         seatMapObjectType: SeatMapObjectType, 
@@ -141,28 +141,36 @@ export abstract class SeatMapObject extends WithObjectId(fabric.Group) implement
         super(undefined, options?.groupOptions);
 
         this._seatMapObjectType = seatMapObjectType;
-        this._innerShape = this._createInternalFabricObject(
-            innerShapeType,
-            options?.innerShapeOptions
-        );
-        this._innerLabelText = this._createInternalFabricObject(
-            FabricObjectTypeConstants.FABRIC_TEXT,
-            options?.innerTextOptions
-        ) as fabric.Text;
 
-        // this.add(this._innerShape, this._innerLabelText).addWithUpdate();
-        this.addWithUpdate(this._innerShape);
-        this.add(this._innerLabelText);
+        if (options?.innerShapeOptions) {
+            this._innerShape = this._createInternalFabricObject(
+                innerShapeType,
+                options?.innerShapeOptions
+            );
+            this.addWithUpdate(this._innerShape);
+        };
+        if (options?.innerTextOptions) {
+            this._innerLabelText = this._createInternalFabricObject(
+                FabricObjectTypeConstants.FABRIC_TEXT,
+                options?.innerTextOptions
+            ) as fabric.Text;
+            this.add(this._innerLabelText);
+        };
+
         this.setOptions(options?.groupOptions);
         this.setControlsVisibility(options?.controlVisibilityOptions);
     }
+
+    
 
     /**
      * 내부 도형 객체의 타입을 반환합니다. (rect, circle, i-text, etc...)
      */
     public get innerShapeType(): FabricObjectType { 
-        Assert.NonNull(this._innerShape.type);
-        return this._innerShape.type as FabricObjectType; // WARN!
+        if (this._innerShape) {
+            return this._innerShape.type as FabricObjectType; // WARN!
+        }
+        return FabricObjectTypeConstants.UNDEFINED;
     }
 
     /**
@@ -176,16 +184,16 @@ export abstract class SeatMapObject extends WithObjectId(fabric.Group) implement
     // Methods to Control
     public updateInnerTextContent(text: string) {
         // this._innerLabelText.text = text;
-        this._innerLabelText.set({ text: text });
+        this._innerLabelText?.set({ text: text });
         // this.addWithUpdate();
     }
 
     public updateInnerTextAngle(angle: number) {
-        this._innerLabelText.set({ angle: angle });
+        this._innerLabelText?.set({ angle: angle });
     }
 
     public updateInnerTextVisibility(visible: boolean) {
-        this._innerLabelText.set({ visible: visible });
+        this._innerLabelText?.set({ visible: visible });
     }
 
     /**

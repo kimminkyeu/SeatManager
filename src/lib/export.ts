@@ -1,5 +1,5 @@
 import { Venue } from "@/types/venue.type";
-import { SeatMapObjectTypeConstants, SeatMapUtil } from "./type-check";
+import { FabricObjectTypeConstants, SeatMapObjectTypeConstants, SeatMapUtil } from "./type-check";
 import { Assert } from "./assert";
 import { CircleShapeExport, ImageExport, ImageHtmlTag, RectangleShapeExport, SeatHtmlTag, SeatMap, SeatMapJsonForFrontendRendering, SeatMappingData, SectorExport, ShapeExport, eShapeExportType } from "@/types/export.type";
 import { cloneDeep } from "lodash";
@@ -65,7 +65,7 @@ export function createSeatMapV1(
                 break;
 
             // ------------------------------------
-            case (SeatMapObjectTypeConstants.FABRIC_IMAGE):
+            case (FabricObjectTypeConstants.FABRIC_IMAGE):
                 const img = (object as fabric.Image);
 
                 const prevLeft = img.left;

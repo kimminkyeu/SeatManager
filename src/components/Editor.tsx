@@ -166,6 +166,7 @@ function Editor(): ReactElement {
             (selectedSector.destroy() as Sector).getSeats().forEach((seat: Seat) => {
                 Assert.True(seat instanceof Seat);
                 const copiedSeat = seat.constructNewCopy();
+
                 canvas.add(copiedSeat);
                 selection.addWithUpdate(copiedSeat);
                 // 편집 모드 종료시 활용할 데이터.

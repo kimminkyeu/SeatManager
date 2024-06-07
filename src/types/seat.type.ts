@@ -44,11 +44,11 @@ export class Seat extends ExportableSeatMapObject {
     }
 
     public get fill() {
-        return (this._innerShape.fill as string);
+        return (this._innerShape?.fill as string);
     }
 
     public set fill(color: string) {
-        this._innerShape.setOptions({ fill: color });
+        this._innerShape?.setOptions({ fill: color });
     }
  
     // for ( editing attribute input change --> instance update )
@@ -169,7 +169,9 @@ export class Seat extends ExportableSeatMapObject {
                 top: adjustedTop,
             });
         }
-        return (copiedSeat.destroy() as Seat)._innerShape; 
+        const ret = (copiedSeat.destroy() as Seat)._innerShape;
+        Assert.NonNull(ret, "Seat은 내부 innerShape 객체가 반드시 존재해야 합니다!");
+        return ret; 
     }
 
     // --------------------------------------------------------------------------
@@ -178,6 +180,24 @@ export class Seat extends ExportableSeatMapObject {
     }
 
     public constructNewCopy() {
+        if (this.innerShapeType === FabricObjectTypeConstants.FABRIC_CIRCLE) {
+            return new Seat(
+                this.innerShapeType,
+                this.seatRow,
+                this.seatCol,
+                {
+                    fill: this.fill,
+                    angle: this.angle,
+                    left: this.left,
+                    top: this.top,
+                    width: this.width,
+                    height: this.height,
+
+                    radius: (this._innerShape as fabric.Circle).radius,
+                },
+            )
+
+        } 
         return new Seat(
             this.innerShapeType,
             this.seatRow,
@@ -187,6 +207,8 @@ export class Seat extends ExportableSeatMapObject {
                 angle: this.angle,
                 left: this.left,
                 top: this.top,
+                width: this.width,
+                height: this.height
             },
         )
     }
@@ -247,6 +269,11 @@ export class Seat extends ExportableSeatMapObject {
      * 물체 회전에 관계없이 텍스트는 항상 사용자 시점과 수평을 이루도록 하기 위한 함수입니다.
      */
     public updateTextAngleToCurrentViewAngle() {
+        if (this.group?.angle) {
+            const textAngle = ((360 - (this.group.angle)) % 360);
+            this.updateInnerTextAngle(textAngle);
+            return;
+        }
         if (this.angle) {
             const textAngle = ((360 - (this.angle)) % 360);
             this.updateInnerTextAngle(textAngle);
