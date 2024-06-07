@@ -7,7 +7,7 @@ import _ from "lodash";
 import { COLORS, TOOL_ELEMENT_DEFAULT } from "@/constants";
 import { Sector } from "@/types/sector.type";
 import { Assert } from "./assert";
-import { ObjectType, ObjectUtil } from "./type-check";
+import { FabricObjectTypeConstants, SeatMapObjectTypeConstants, SeatMapUtil } from "./type-check";
 // import { createSeat } from "./seat";
 
 export const handleSelectAll = (canvas: fabric.Canvas) => {
@@ -131,32 +131,33 @@ export const handlePaste = (
                     (enlivenedObjects: fabric.Object[]) => {
                         enlivenedObjects.forEach((obj) => {
 
-                            switch (ObjectUtil.getType(obj)) {
+                            switch (SeatMapUtil.getType(obj)) {
 
-                                case (ObjectType.SECTOR):
+                                case (SeatMapObjectTypeConstants.SECTOR):
                                     // console.log(obj);
                                     const casted = (obj as Sector);
                                     objects.push(new Sector(
-                                        casted.baseShape,
+                                        casted.innerShapeType,
                                         "NULL",
-                                        casted.editorObjectData.rows,
-                                        casted.editorObjectData.cols,
-                                        casted.editorObjectData.gapX,
-                                        casted.editorObjectData.gapY,
+                                        casted.seatMapObjectProperty.rows,
+                                        casted.seatMapObjectProperty.cols,
+                                        casted.seatMapObjectProperty.gapX,
+                                        casted.seatMapObjectProperty.gapY,
                                         {
                                             left: (casted.left) ? (casted.left + offset) : (canvas.getCenter().left),
                                             top: (casted.top) ? (casted.top + offset) : (canvas.getCenter().top),
                                             fill: casted.fill,
                                             angle: casted.angle,
+                                            // ...
                                         }
                                     ));
                                     break;
 
-                                case (ObjectType.SEAT):
+                                case (SeatMapObjectTypeConstants.SEAT):
                                     Assert.Never("아직 미구현된 기능입니다.");
                                     break;
 
-                                case (ObjectType.FABRIC_GROUP):
+                                case (FabricObjectTypeConstants.FABRIC_GROUP):
                                     const group = (obj as fabric.Group);
                                     group.forEachObject((obj: any) => {
                                         obj.objectId = uuidv4(); // set child item's object id

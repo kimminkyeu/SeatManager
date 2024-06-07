@@ -1,13 +1,13 @@
 import { Gradient, IGroupOptions, IObjectOptions, Pattern } from "fabric/fabric-impl";
 import { ShapeEditingAttribute, EditingAttribute } from "./canvas.type";
-import { COLORS, SEAT_HEIGHT, SEAT_WIDTH } from "@/constants";
+import { COLORS, DEFAULTS, SEAT_HEIGHT, SEAT_WIDTH } from "@/constants";
 import { Seat, CircleSeatObjectData } from "./seat.type";
 import { fabric } from "fabric";
 import { Assert } from "@/lib/assert";
 import { createText } from "@/lib/shapes";
 import { createShapeEditingAttribute } from "@/lib/canvas";
-import { ObjectType, ObjectUtil } from "@/lib/type-check";
-import { Capturable, ExportableEditorObject, PositionAdjustment } from "./editorObject.type";
+import { FabricObjectType, FabricObjectTypeConstants, SeatMapObjectTypeConstants, SeatMapUtil } from "@/lib/type-check";
+import { EditableStateExtractable, PositionAdjustment, FabricObjectEventReaction, ExportableSeatMapObject, SeatMapObjectOptions } from "./editorObject.type";
 import { cloneDeep } from "lodash";
 import { SeatExport, SeatMappingData, SectorExport } from "./export.type";
 
@@ -19,27 +19,31 @@ export interface SectorEditingAttribute extends Omit<ShapeEditingAttribute, 'typ
     sectorGapY: number;
 }
 
-export class Sector extends ExportableEditorObject implements Capturable {
+export class Sector extends ExportableSeatMapObject implements EditableStateExtractable {
+
+    private static readonly _staticFontSize: number = 12;
+
     // ----------------------------------------
     private _sectorId: string; // sectorId
-    private _gapX: number = 0; // sectorId
-    private _gapY: number = 0; // sectorId
     private _seatRowCount: number = 0; 
     private _seatColCount: number = 0;
+
+    private _sectorColor: string;
+
+    private _gapX: number = 0; // sectorId
+    private _gapY: number = 0; // sectorId
     private _gapPrev: number = 0; // temporal value for slider
     private _anglePrev: number = 0; // temporal value for slider
-    // private _textObject: fabric.Text; // description text
-    private _sectorColor: string;
 
     // ---------------------------------------- 
     public get sectorId() {
         return this._sectorId;
     }
 
-    public get sectorGapX() {
+    public get sectorGapX(): number | undefined {
         return this._gapX;
     }
-    public get sectorGapY() {
+    public get sectorGapY(): number | undefined {
         return this._gapY;
     }
 
@@ -59,7 +63,7 @@ export class Sector extends ExportableEditorObject implements Capturable {
     public set fill(color: string) {
         this._sectorColor = color;
         this.getSeats().forEach((seat: Seat) => {
-            seat.changeFillColor(color);
+            seat.fill = color;
         })
     }
  
@@ -82,20 +86,20 @@ export class Sector extends ExportableEditorObject implements Capturable {
 
     // ---------------------------------------------------------------------
     // data format for Right sidebar's React.State
-    public override toEditingAttibute(): EditingAttribute {
+    public override extractEditableState(): EditingAttribute {
         const shapeAttribute = createShapeEditingAttribute(this as fabric.Object) as EditingAttribute;
         const sectorAttribute = (shapeAttribute as SectorEditingAttribute);
         sectorAttribute.type = "SectorEditingAttribute";
         sectorAttribute.sectorId = this._sectorId;
-        sectorAttribute.sectorGapX = this._gapX;
-        sectorAttribute.sectorGapY = this._gapY;
+        sectorAttribute.sectorGapX = this._gapX ?? 0;
+        sectorAttribute.sectorGapY = this._gapY ?? 0;
         sectorAttribute.fill = this.fill;
         return sectorAttribute;
     }
 
     // for ( toObject() data --> new instance  )
-    public override get editorObjectData() {
-        console.log("Sector: get editorObjectData() called");
+    public override get seatMapObjectProperty() {
+        console.log("Sector: get seatMapObjectProperty() called");
         // return states that need to be restored while copied.
         return {
             gapX: this.sectorGapX,
@@ -108,23 +112,18 @@ export class Sector extends ExportableEditorObject implements Capturable {
     // MUST OVERRIDE TO CALL toObject() CHAIN !!!
     public override toObject() {
         console.log("Sector : toObject() called");
+        // fabric native toObject 에서 this["foo"]... 이런식으로 뽑아온다.
         return super.toObject([
             // NOTE: OBJECT 에서 객체를 복구할 때 반드시 필요한 데이터를 여기에 포함시킵니다.
-            "editorObjectData"
+            "seatMapObjectProperty"
         ]);
     }
 
-    public override toSVG(reviver?: Function | undefined): string {
-        console.log("Sector : toSVG() called");
-        const SVG = super.toSVG(reviver);
-        return SVG;
-    }
-
-    public override export(adjustment?: PositionAdjustment): SectorExport {
+    public override exportAsSeatMapFormat(adjustment?: PositionAdjustment): SectorExport {
         const seats: Array<SeatExport<any>> = [];
 
         this._collectDataFromEachSeat(
-            seat => seats.push(seat.export(adjustment))
+            seat => seats.push(seat.exportAsSeatMapFormat(adjustment))
         )
 
         const exported: SectorExport = {
@@ -135,57 +134,13 @@ export class Sector extends ExportableEditorObject implements Capturable {
         return exported;
     }
 
-    /**
-     *  @deprecated 
-    */
-    public override toCompressedObjectData(adjustment?: PositionAdjustment | undefined): Array<CircleSeatObjectData> {
-        // array of internal seat object
-        const seatDataArray: Array<CircleSeatObjectData> = [];
-
-        this._collectDataFromEachSeat(
-            (seat) => {
-                const seatData = seat.toCompressedObjectData(adjustment);
-                seatData.sectorId = this.sectorId;
-                seatDataArray.push(seatData);
-            }
-        )
-
-        return seatDataArray;
-    }
-
-    /**
-     *  @deprecated 
-    */
-    public override toTagsAndMappingData(adjustment?: PositionAdjustment | undefined): { tags: string[]; mappingData: SeatMappingData[]; } {
-
-        const tags: Array<string> = [];
-        const mappingData: Array<SeatMappingData> = [];
-
-        this._collectDataFromEachSeat(
-            (seat) => {
-                const val = seat.toTagsAndMappingData(adjustment);
-                val.mappingData.forEach(m => (m.sectorId = this.sectorId));
-                tags.push(...val.tags);
-                mappingData.push(...val.mappingData);
-            }
-        )
-        return {
-            tags: tags,
-            mappingData: mappingData,
-        };
-    }
-
     // ---------------------------------------------------------------------
-    public override onRotating(): void {}
-
-    public override onScaling(): void {}
-
-    public override onModified(): void {
-        console.log("Sector onModified()");
+    public override AfterFabricObjectModifiedEvent(): void {
+        console.log("Sector AfterFabricObjectModifiedEvent()");
         // change text angle.
         if (this.angle) {
             this.getSeats().forEach((seat: Seat) => {
-                seat.onModified();
+                seat.AfterFabricObjectModifiedEvent();
             })
         }
     }
@@ -194,7 +149,7 @@ export class Sector extends ExportableEditorObject implements Capturable {
     public getSeats(): Seat[] {
         let seats: Seat[] = [];
         this.getObjects().forEach((o: fabric.Object) => {
-            if (ObjectType.SEAT === ObjectUtil.getType(o)) {
+            if (SeatMapObjectTypeConstants.SEAT === SeatMapUtil.getType(o)) {
                 Assert.True(o instanceof Seat);
                 seats.push(o as Seat);
             }
@@ -214,7 +169,7 @@ export class Sector extends ExportableEditorObject implements Capturable {
 
     public constructNewCopy(): Sector {
         return new Sector(
-            this.baseShape,
+            this.innerShapeType,
             this.sectorId,
             this.sectorRows, // if 0, do not auto create seats.
             this.sectorCols, // if 0, do not auto create seats.
@@ -225,56 +180,73 @@ export class Sector extends ExportableEditorObject implements Capturable {
                 fill: this.fill,
                 left: this.left,
                 top: this.top,
-                canvas: this.canvas,
+                width: this.width,
+                height: this.height,
+                // canvas: this.canvas,
             }
         );
     }
 
     constructor(
-        shapeType: string,
+        shapeType: FabricObjectType,
         sectorId: string,
         rowsToGenerate?: number,
         colsToGenerate?: number,
         gapX?: number,
         gapY?: number,
-        options?: IGroupOptions
+        options?: SeatMapObjectOptions
     ) {
-        super(ObjectType.SECTOR, shapeType, options);
+        super(
+            SeatMapObjectTypeConstants.SECTOR, 
+            shapeType, 
+            {
+                groupOptions: {
+                    lockScalingX: true,
+                    lockScalingY: true,
+                    left: options?.left,
+                    top: options?.top,
+                },
+                innerShapeOptions: {
+                    width: options?.width,
+                    height: options?.height,
+                    strokeWidth: 1,
+                    stroke: options?.fill ?? `#000000`,
+                    originX: 'left',
+                    originY: 'top',
+                    fill: `rgba(0,0,0,0)`, // default fill is transparent color
+                },
+                innerTextOptions: {
+                    text: `Sector: ${sectorId}`,
+                    originX: 'left',
+                    originY: 'top',
+                    // left: options?.left ? options?.left + (Sector._staticFontSize) : (Sector._staticFontSize),
+                    // left: options?.left ? options?.left : 0,
+                    // top: options?.top ? options?.top : 0,
+                },
+                controlVisibilityOptions: {
+                    mtr: true, // show rotation
+                    mt: false,
+                    tr: false,
+                    tl: false,
+                    mb: false,
+                    ml: false,
+                    mr: false,
+                    bl: false,
+                    br: false,
+                }
+            }
+        );
+
+        if (rowsToGenerate) { this._seatRowCount = rowsToGenerate; }
+        if (colsToGenerate) { this._seatColCount = colsToGenerate; }
+        if (gapX) { this._gapX = gapX; }
+        if (gapY) { this._gapY = gapY; }
 
         this._sectorId = sectorId;
-
-        if (gapX) {
-            this._gapX = gapX;
-        }
-        if (gapY) {
-            this._gapY = gapY;
-        }
-        if (rowsToGenerate) {
-            this._seatRowCount = rowsToGenerate;
-        }
-        if (colsToGenerate) {
-            this._seatColCount = colsToGenerate;
-        }
-
         this._sectorColor = (options?.fill ?? COLORS.object.default) as string;
-        this.lockScalingX = true;
-        this.lockScalingY = true;
-        this.lockRotation = false;
-        this.originX = 'center';
-        this.originY = 'center';
 
-        this.setControlsVisibility({
-            mtr: true, // show rotation
-            mt: false,
-            tr: false,
-            tl: false,
-            mb: false,
-            ml: false,
-            mr: false,
-            bl: false,
-            br: false,
-        })
-
+        // ---------------------------------------------------
+        // generate inner seats
         const leftPos = (options?.left ?? 0);
         const topPos = (options?.top ?? 0);
 
@@ -282,24 +254,22 @@ export class Sector extends ExportableEditorObject implements Capturable {
             for (let row = 0; row < rowsToGenerate; ++row) {
                 for (let col = 0; col < colsToGenerate; ++col) {
                     const seat = new Seat(
-                        this.baseShape,
+                        FabricObjectTypeConstants.FABRIC_CIRCLE, // TODO: 기본값은 CIRCLE
                         row + 1, // start with 1
                         col + 1,
                         {
-                            angle: 0,
-                            originX: "center",
-                            originY: "center",
+                            radius: DEFAULTS.SEAT_SIZE / 2,
+                            width: DEFAULTS.SEAT_SIZE,
+                            height: DEFAULTS.SEAT_SIZE,
+                            // left: leftPos + (DEFAULTS.SEAT_SIZE/2) + (col * (DEFAULTS.SEAT_SIZE + this._gapX)),
+                            // top: topPos + (DEFAULTS.SEAT_SIZE/2) + (row * (DEFAULTS.SEAT_SIZE + this._gapY)),
+                            left: leftPos + (col * (DEFAULTS.SEAT_SIZE + this._gapX)),
+                            top: topPos + (row * (DEFAULTS.SEAT_SIZE + this._gapY)),
                             fill: this._sectorColor,
-                            left: leftPos + (SEAT_WIDTH / 2) + (col * (SEAT_WIDTH + this._gapX)),
-                            top: topPos + (SEAT_HEIGHT / 2) + (row * (SEAT_HEIGHT + this._gapY)),
                         });
                     this.addWithUpdate(seat);
                 }
             }
-        }
-        if (options) {
-            if (options.angle)
-                this.set("angle", options.angle);
         }
     }
 
@@ -309,13 +279,15 @@ export class Sector extends ExportableEditorObject implements Capturable {
         this._gapPrev = this._gapX;
         this._gapX = newGapX;
 
+        // let lastWidth = 0;
+
         if (this.angle !== undefined) {
             this._anglePrev = this.angle;
         }
         this.setOptions({
             angle: 0,
-            originX: "left", // ?
-            originY: "top", // ?
+            originX: "left",
+            originY: "top",
         });
         const seats = this.getSeats();
         seats.forEach((seat: Seat, idx: number) => {
@@ -326,11 +298,21 @@ export class Sector extends ExportableEditorObject implements Capturable {
         });
 
         this.addWithUpdate(); // update group bounds
+
         this.setOptions({
             angle: this._anglePrev,
-            originX: "center",
-            originY: "center",
+            originX: "left",
+            originY: "top",
         });
+
+        // console.log(this.width);
+        // update innerShape (rect)
+        // console.log(this.getBoundingRect().width);
+        // this._innerShape.setOptions({
+            // width: this.getBoundingRect().width,
+            // width: this.width,
+        // })
+        this._innerShape.setOptions({ width: 1000 });
     }
 
     private _applyGapYandUpdate(newGapY: number) {
@@ -356,12 +338,19 @@ export class Sector extends ExportableEditorObject implements Capturable {
         this.addWithUpdate(); // update group bounds
         this.setOptions({
             angle: this._anglePrev,
-            originX: "center",
-            originY: "center",
+            // originX: "center",
+            // originY: "center",
         });
+
+        // update innerShape (rect)
+        this._innerShape.setOptions({
+            width: this.width,
+        })
     }
 
     /**
+     * @deprecated
+     * 사용 이유와 목적이 불분명. 제거할 것.
      * @description
      * 편집모드를 거치는 과정에서 seatRow seatCol 개수는 0이 됩니다.
      * 따라서 편집모드를 거쳤다면 true를 반환합니다.
@@ -379,7 +368,7 @@ export class Sector extends ExportableEditorObject implements Capturable {
             const raw = cloneDeep(this)
             const dest = raw.destroy() as Sector;
             dest.getSeats().forEach((obj: fabric.Object) => {
-                if (ObjectType.SEAT === ObjectUtil.getType(obj)) {
+                if (SeatMapObjectTypeConstants.SEAT === SeatMapUtil.getType(obj)) {
                     Assert.True(obj instanceof Seat);
                     collector(obj as Seat);
                 }
@@ -396,13 +385,11 @@ export class Sector extends ExportableEditorObject implements Capturable {
 
         // const destroyed = raw2.destroy();
         // (destroyed as Sector).getSeats().forEach((obj: fabric.Object) => {
-        //     if (ObjectType.SEAT === ObjectUtil.getType(obj)) {
+        //     if (SeatMapObjectTypeConstants.SEAT === SeatMapUtil.getType(obj)) {
         //         Assert.True(obj instanceof Seat);
         //         collector(obj as Seat);
         //     }
         // });
         // return;
     }
-
-
 }

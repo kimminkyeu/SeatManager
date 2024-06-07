@@ -20,8 +20,8 @@ import { Assert } from "./assert";
 import { createSectorPreview } from "./sector";
 import { Seat } from "@/types/seat.type";
 import { Sector } from "@/types/sector.type";
-import { ObjectType, ObjectUtil } from "./type-check";
-import { ExportableEditorObject } from "@/types/editorObject.type";
+import { SeatMapObjectTypeConstants, SeatMapUtil } from "./type-check";
+import { EditableSeatMapObject } from "@/types/editorObject.type";
 
 // initialize fabric canvas
 export const initializeFabric = ({
@@ -155,17 +155,16 @@ export const createEditingAttribute_MultipleSelection = (sources: fabric.Object[
 
 export const createEditingAttribute = (source: fabric.Object): (EditingAttribute | null) => {
 
-    switch (ObjectUtil.getType(source)) {
+    switch (SeatMapUtil.getType(source)) {
 
-      case (ObjectType.SECTOR):
+      case (SeatMapObjectTypeConstants.SECTOR):
         /** Fall through */
-      case (ObjectType.SEAT):
+      case (SeatMapObjectTypeConstants.SEAT):
         /** Fall through */
-      case (ObjectType.VENUE):
-        /** Fall through */
-        return (source as ExportableEditorObject).toEditingAttibute();
+      case (SeatMapObjectTypeConstants.VENUE):
+        return (source as EditableSeatMapObject).extractEditableState();
 
-      case (ObjectType.FABRIC_GROUP):
+      case (SeatMapObjectTypeConstants.FABRIC_GROUP):
         // TODO: 그룹은 일단 첫번째 자식만 띄우지만, 나중엔 공통 요소를 띄우는 걸로 변경해도 될 것 같다..
         const objs = (source as fabric.Group).getObjects();
         return createShapeEditingAttribute(objs[0]);

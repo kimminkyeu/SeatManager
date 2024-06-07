@@ -5,11 +5,11 @@ export const TOOL_VALUE = {
   delete: "delete",
   group: "group",
   ungroup: "ungroup",
-  circle: ObjectType.FABRIC_CIRCLE,
-  text: ObjectType.FABRIC_TEXT,
-  image: ObjectType.FABRIC_IMAGE,
-  seat: ObjectType.SEAT,
-  sector: ObjectType.SECTOR,
+  circle: FabricObjectTypeConstants.FABRIC_CIRCLE,
+  text: FabricObjectTypeConstants.FABRIC_TEXT,
+  image: FabricObjectTypeConstants.FABRIC_IMAGE,
+  seat: SeatMapObjectTypeConstants.SEAT,
+  sector: SeatMapObjectTypeConstants.SECTOR,
 }
 
 interface ShapeSize {
@@ -38,6 +38,10 @@ export const SHAPE_SIZE : ShapeSize = {
   }
 }
 
+export const DEFAULTS = {
+  SEAT_SIZE: 40
+}
+
 export const COLORS = {
   venue: {
     default: "#000000",
@@ -52,7 +56,7 @@ export const COLORS = {
   }
 };
 
-import { ObjectType } from "@/lib/type-check";
+import { FabricObjectTypeConstants, SeatMapObjectTypeConstants } from "@/lib/type-check";
 import * as svgs from "@/svgs/import";
 import { ToolElement } from "@/types/canvas.type";
 

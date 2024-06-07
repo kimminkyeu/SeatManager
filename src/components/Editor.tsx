@@ -12,9 +12,9 @@ import { handleDelete, groupActiveSelection, handleKeyDown, ungroupActiveSelecti
 import { undo, redo } from "@/lib/history";
 import { Assert } from "@/lib/assert";
 import { useImmer } from "use-immer";
-import { ObjectType, ObjectUtil } from "@/lib/type-check";
+import { FabricObjectType, FabricObjectTypeConstants, SeatMapObjectTypeConstants, SeatMapUtil } from "@/lib/type-check";
 import { Sector } from "@/types/sector.type";
-import { ExportableEditorObject, PositionAdjustment, EditableObject } from "@/types/editorObject.type";
+import { EditableSeatMapObject, ExportableSeatMapObject, PositionAdjustment, SeatMapObject } from "@/types/editorObject.type";
 
 import "@/preview.script";
 import { Venue } from "@/types/venue.type";
@@ -73,248 +73,11 @@ function Editor(): ReactElement {
     const isEditingModeRef = useRef<boolean>(false);
 
     const venueRef = useRef<Venue | null>(null);
-
     // 편집 모드에서 현재 섹터와 연관된 Seat들을 저장하는 곳. 편집 모드를 끄면 Sector로 재구성하기 위함.
     const editingSeatsRef = useRef< Map<string, Seat> | null>(null);
     // 이건 기존 원본.
     const editingSectorRef = useRef<Sector | null>(null);
 
-    // NOTE: 버전2. 압축 버전을 이용한 HTML 렌더링
-    /** @deprecated */
-    const createHtmlFromCanvasV2Compressed = (): string => {
-        const json = createCompressedJsonObjectFromCanvas();
-
-        let html = `<svg style=\"
-        width:${json.venue.width}px; height:${json.venue.height}px; 
-        border: 2px dashed;
-        \">\n`;
-
-        json.seats.forEach((seat: CircleSeatObjectData) => {
-            const circle = `<circle id="${seat.seatId}" r="${seat.r}" cx="${seat.cx}" cy="${seat.cy}" fill="${seat.fill}" />\n`
-            html += circle;
-        })
-        html += "</svg>";
-
-        console.log(html);
-        // --------------------------------------
-        // run htmlPreviewHandler async
-        setTimeout(() => {
-            htmlPreviewHandlerV2(json);
-        }, 50);
-        // --------------------------------------
-
-        return html;
-    }
-
-    /** @deprecated */
-    const htmlPreviewHandlerV2 = (json: SeatMapJsonCompressedFormat): void => {
-        const div = document.getElementById("preview-selected-seat-info");
-
-        Array.from(json.seats).forEach((seatData: CircleSeatObjectData) => {
-            const seatElem = document.getElementById(seatData.seatId);
-
-            div && (div.innerText = `구역: [  ?  ] - 좌석: [ ? ]행 [ ? ]열`);
-            if (seatElem) {
-                seatElem.onmouseover = () => {
-                    if (false === seatElem.classList.contains("toggle")) {
-                        seatElem.style.fill = "#CD2121";
-                        seatElem.classList.add("toggle");
-                    } else {
-                        seatElem.style.fill = seatData.fill;
-                        seatElem.classList.remove("toggle");
-                    }
-                    div && (div.innerText = `구역: [${seatData.sectorId}] - 좌석: [${seatData.seatRow}]행 [${seatData.seatCol}]열`);
-                }
-
-                seatElem.onmouseout = () => {
-                    if (false === seatElem.classList.contains("toggle")) {
-                        seatElem.style.fill = "#CD2121";
-                        seatElem.classList.add("toggle");
-                    } else {
-                        seatElem.style.fill = seatData.fill;
-                        seatElem.classList.remove("toggle");
-                    }
-                    let text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                    text.textContent = `${seatData.seatRow}`;
-                    div && (div.innerText = `구역: [  ?  ] - 좌석: [ ? ]행 [ ? ]열`);
-                };
-            }
-        });
-    }
-
-    // ----------------------------------------------------------
-    /** @deprecated */
-    const createHtmlFromCanvasV1 = (): string => {
-        const json = createJsonObjectFromCanvas();
-
-        let html = `<svg style=\"
-                    width:${json.venue.divElementWidth}px; height:${json.venue.divElementHeight}px; 
-                    border: 2px dashed;
-                    \">`;
-
-        json.images.forEach((imageTags: string) => {
-            html += imageTags;
-        });
-        json.seats.forEach((seatHtmlTags: string) => {
-            html += seatHtmlTags;
-        });
-        html += "</svg>";
-
-        // --------------------------------------
-        // run htmlPreviewHandler async
-        setTimeout(() => {
-            setSeatmapPreviewPageEvent_v1(json);
-        }, 50);
-        // --------------------------------------
-
-        return html;
-    }
-
-
-
-    /** @deprecated */
-    const exportToCustomJsonFormat = () => {
-        const jsonObject = createJsonObjectFromCanvas();
-        const serialized = JSON.stringify(jsonObject, null, 4);
-        const fileName = `venue_${jsonObject.venue.venueId}.json`;
-        saveStringToLocalDisk(fileName, serialized);
-    }
-
-    /** @deprecated */
-    const exportToCustomCompressedJsonFormat = () => {
-        const jsonObject = createCompressedJsonObjectFromCanvas();
-        const serialized = JSON.stringify(jsonObject, null, 4);
-        const fileName = `venue_${jsonObject.venue.id}.json`;
-        saveStringToLocalDisk(fileName, serialized);
-    }
-
-    /** @deprecated */
-    const createCompressedJsonObjectFromCanvas = (): SeatMapJsonCompressedFormat => {
-        const fabricCanvas = fabricCanvasRef.current;
-        Assert.NonNull(fabricCanvas, "fabricCanvas 객체가 없습니다!");
-        const venue = venueRef.current;
-        Assert.NonNull(venue, "fabricCanvas 객체가 없습니다!");
-
-        const venueData = {
-            id: venue.venueId,
-            width: venue.width ?? 0,
-            height: venue.height ?? 0,
-        }
-
-        const seatCompressedDataArray: Array<CircleSeatObjectData> = [];
-
-        fabricCanvas.forEachObject((object: fabric.Object) => {
-
-            const type = ObjectUtil.getType(object);
-
-            // VENUE는 제외합니다. (only ExportableEditorObject objects)
-            if (object instanceof ExportableEditorObject) {
-
-                const ret = (object as ExportableEditorObject).toCompressedObjectData({
-                    left: venue.left,
-                    top: venue.top
-                });
-                seatCompressedDataArray.push(...ret);
-                return;
-            }
-
-            if (ObjectType.FABRIC_IMAGE === type) {
-                // center 기준 위치 조정.
-                const adjustedLeft = (object.left) ? (object.left - (venue.left ?? 0)) : object.left;
-                const adjustedTop = (object.top) ? (object.top - (venue.top ?? 0)) : object.top;
-
-                // toSVG 위치 조정용.
-                const img = (object as fabric.Image);
-                const prevLeft = img.left;
-                const prevTop = img.top;
-
-                img.setOptions({ left: adjustedLeft, top: adjustedTop }); // 위치 임시 조정.
-                console.log(img.toObject());
-                img.setOptions({ left: prevLeft, top: prevTop }); // 위치 원상 복구.
-
-                return;
-            }
-        });
-
-        const resultingExportObject: SeatMapJsonCompressedFormat = {
-            venue: venueData,
-            seats: seatCompressedDataArray,
-        };
-        return resultingExportObject;
-    }
-
-    /**
-     * @deprecated
-     * 구버전입니다.
-     */
-    const createJsonObjectFromCanvas = (): SeatMapJsonForFrontendRendering => {
-        const fabricCanvas = fabricCanvasRef.current;
-        Assert.NonNull(fabricCanvas, "fabricCanvas 객체가 없습니다!");
-        const venue = venueRef.current;
-        Assert.NonNull(venue, "fabricCanvas 객체가 없습니다!");
-
-        const venueData = {
-            venueId: venue.venueId,
-            divElementWidth: venue.width ?? 0,
-            divElementHeight: venue.height ?? 0,
-        }
-        const seatMappingArray      : Array<SeatMappingData>   = [];
-        const seatHtmlTagArray      : Array<SeatHtmlTag>    = [];
-        const imagesHtmlTagArray    : Array<string>         = [];
-        
-        fabricCanvas.forEachObject((object: fabric.Object) => {
-
-            const type = ObjectUtil.getType(object);
-
-            // VENUE는 제외합니다. (only ExportableEditorObject objects)
-            if (object instanceof ExportableEditorObject) {
-
-                const ret = (object as ExportableEditorObject).toTagsAndMappingData({
-                    left: venue.left,
-                    top: venue.top
-                })
-                seatMappingArray.push(...ret.mappingData);
-                seatHtmlTagArray.push(...ret.tags);
-                return;
-            }
-
-            // TODO: 이미지를 그룹화해서 Export하면 ???
-
-            // TODO: Fabric native 객체는 일단 아래와 같이 명시적으로 변환했지만,
-            //       나중엔 Image도 EditorObject로 만들어야 한다...!
-
-
-
-            if (ObjectType.FABRIC_IMAGE === type) {
-
-                // center 기준 위치 조정.
-                const adjustedLeft = (object.left) ? (object.left - (venue.left ?? 0)) : object.left;
-                const adjustedTop = (object.top) ? (object.top - (venue.top ?? 0)) : object.top;
-
-                // toSVG 위치 조정용.
-                const img = (object as fabric.Image);
-                const prevLeft = img.left;
-                const prevTop = img.top;
-
-                img.setOptions({left: adjustedLeft, top: adjustedTop}); // 위치 임시 조정.
-                imagesHtmlTagArray.push(img.toSVG());
-                console.log(img.toObject());
-                img.setOptions({left: prevLeft, top: prevTop}); // 위치 원상 복구.
-
-                return;
-            }
-        });
-
-        const resultingExportObject: SeatMapJsonForFrontendRendering = {
-            venue: venueData,
-            seats: seatHtmlTagArray,
-            images: imagesHtmlTagArray,
-            mapping: seatMappingArray,
-        };
-
-        return resultingExportObject;
-    }
-  
     // --------------------------------------------------------------------
     const setObjectSelectable = (canvas: fabric.Canvas, _selectable: boolean) => {
         if (true === _selectable) {
@@ -370,7 +133,7 @@ function Editor(): ReactElement {
         let selectedSector = canvas.getActiveObject() as (Sector | null);
 
         canvas.forEachObject((obj: fabric.Object) => {
-            const type = ObjectUtil.getType(obj);
+            const type = SeatMapUtil.getType(obj);
             // Except selected sector.
             if (obj !== selectedSector) {
                 obj.set({
@@ -379,7 +142,7 @@ function Editor(): ReactElement {
                     opacity: (true === isEditingMode) ? (0.35) : (1),
                 })
             }
-            if (obj !== selectedSector && ObjectType.VENUE === type) {
+            if (obj !== selectedSector && SeatMapObjectTypeConstants.VENUE === type) {
                 (obj as Venue).visible = (true === isEditingMode) ? (false) : (true);
             }
         });
@@ -391,7 +154,7 @@ function Editor(): ReactElement {
         if (true === isEditingMode) {
             Assert.NonNull(selectedSector);
             Assert.True(
-                (ObjectType.SECTOR === ObjectUtil.getType(selectedSector)),
+                (SeatMapObjectTypeConstants.SECTOR === SeatMapUtil.getType(selectedSector)),
                 "편집 대상 Object는 Sector여야 합니다."
             );
 
@@ -406,7 +169,7 @@ function Editor(): ReactElement {
                 canvas.add(copiedSeat);
                 selection.addWithUpdate(copiedSeat);
                 // 편집 모드 종료시 활용할 데이터.
-                editingSeatsRef.current?.set(copiedSeat.getObjectId(), copiedSeat);
+                editingSeatsRef.current?.set(copiedSeat.objectId, copiedSeat);
             });
             canvas.setActiveObject(selection).requestRenderAll();
             return;
@@ -420,7 +183,7 @@ function Editor(): ReactElement {
 
 
             const newSector = new Sector(
-                editingSectorRef.current.baseShape,
+                editingSectorRef.current.innerShapeType,
                 editingSectorRef.current.sectorId,
             )
             editingSeatsRef.current?.forEach((seat: Seat) => {
@@ -512,7 +275,8 @@ function Editor(): ReactElement {
                 setObjectSelectable(fabricCanvasRef.current, false);
 
                 // Create preview shape
-                const selectedPreviewShape = createShape(selectedToolValueRef.current, undefined, {opacity: PREVIEW_OPACITY});
+                const selectedShape = (selectedToolValueRef.current as FabricObjectType);
+                const selectedPreviewShape = createShape(selectedShape, undefined, {opacity: PREVIEW_OPACITY});
                 if (selectedPreviewShape) {
                     previewCanvasRef.current.add(selectedPreviewShape);
                     previewSeatShapeRef.current = selectedPreviewShape;
@@ -638,8 +402,8 @@ function Editor(): ReactElement {
                 (activeObjects?.length === 1)
             ) {
                 const selectedElement = activeObjects[0];
-                const selectedType = ObjectUtil.getType(selectedElement);
-                const isEditable = ((selectedElement) && (ObjectType.SECTOR === selectedType));
+                const selectedType = SeatMapUtil.getType(selectedElement);
+                const isEditable = ((selectedElement) && (SeatMapObjectTypeConstants.SECTOR === selectedType));
                 setIsEditButtonClickableUiState(isEditable);
                 return;
             }
@@ -669,8 +433,8 @@ function Editor(): ReactElement {
                 (activeObjects?.length === 1)
             ) {
                 const selectedElement = activeObjects[0];
-                const selectedType = ObjectUtil.getType(selectedElement);
-                const isEditable = ((selectedElement) && (ObjectType.SECTOR === selectedType));
+                const selectedType = SeatMapUtil.getType(selectedElement);
+                const isEditable = ((selectedElement) && (SeatMapObjectTypeConstants.SECTOR === selectedType));
                 setIsEditButtonClickableUiState(isEditable);
                 return;
             }
@@ -692,10 +456,9 @@ function Editor(): ReactElement {
         // -----------------------------------------------------------------
         // After event
         fabricCanvas.on("object:modified", (options) => {
-            console.log("fabric: [object:modified]");
             const target = options.target as fabric.Object;
-            if (target instanceof EditableObject) {
-                (target as EditableObject).onModified();
+            if (target instanceof SeatMapObject) {
+                (target as SeatMapObject).AfterFabricObjectModifiedEvent();
             }
         });
 
@@ -709,35 +472,33 @@ function Editor(): ReactElement {
              * @note 섹터 편집 모드에서 좌석이 삭제될 경우, 복구시 싱크를 맞춰야 한다.
              */
             if (true === isEditingModeRef.current) {
-                const removed = options.target as ExportableEditorObject;
+                const removed = options.target as SeatMapObject;
                 Assert.NonNull(
                     editingSeatsRef.current,
                     "편집모드 중에는 editingSeatsRef가 반드시 존재해야 합니다!"
                 );
-                editingSeatsRef.current.delete(removed.getObjectId());
+                editingSeatsRef.current.delete(removed.objectId);
             }
         });
 
         fabricCanvas.on("object:rotating", (options) => {
-            console.log("fabric: [object:rotating");
             // 내부 글자의 Angle을 회전시키기 위함.
             const target = options.target as fabric.Object;
-            if (target instanceof EditableObject) {
-                (target as EditableObject).onRotating();
+            if (target instanceof SeatMapObject) {
+                (target as SeatMapObject).AfterFabricObjectRotatingEvent();
             }
         })
 
         // -----------------------------------------------------------------
         // On-Going event
         fabricCanvas.on("object:scaling", (options) => {
-            console.log("fabric: [object:scaling]");
             handleCanvasObjectScaling({
                 options,
                 setEditingElementUiAttributes,
             });
             const target = options.target as fabric.Object;
-            if (target instanceof EditableObject) {
-                (target as EditableObject).onScaling();
+            if (target instanceof SeatMapObject) {
+                (target as SeatMapObject).AfterFabricObjectScalingEvent();
             }
         });
 
@@ -859,7 +620,7 @@ function Editor(): ReactElement {
                     }
 
                     const sector = new Sector(
-                        ObjectType.FABRIC_CIRCLE,
+                        FabricObjectTypeConstants.FABRIC_RECT,
                         "NULL",
                         seatRowCount,
                         seatColCount,
@@ -869,6 +630,8 @@ function Editor(): ReactElement {
                             left: startPos.x,
                             top: startPos.y,
                             fill: COLORS.object.default,
+                            width: width,
+                            height: height,
                         }
                     );
 
@@ -1018,12 +781,12 @@ function Editor(): ReactElement {
                         fabricRef={fabricCanvasRef}
                         venueRef={venueRef}
                         // -------------------------------------------------
-                        createHtmlPreview={createHtmlFromCanvasV1}
-                        exportToCustomJsonFormat={exportToCustomJsonFormat}
-                        createJsonObjectFromCanvas={createJsonObjectFromCanvas}
-                        createCompressedJsonObjectFromCanvas={createCompressedJsonObjectFromCanvas}
-                        createHtmlPreviewWithCompressedData={createHtmlFromCanvasV2Compressed}
-                        exportToCustomCompressedJsonFormat={exportToCustomCompressedJsonFormat}
+                        // createHtmlPreview={createHtmlFromCanvasV1}
+                        // exportToCustomJsonFormat={exportToCustomJsonFormat}
+                        // createJsonObjectFromCanvas={createJsonObjectFromCanvas}
+                        // createCompressedJsonObjectFromCanvas={createCompressedJsonObjectFromCanvas}
+                        // createHtmlPreviewWithCompressedData={createHtmlFromCanvasV2Compressed}
+                        // exportToCustomCompressedJsonFormat={exportToCustomCompressedJsonFormat}
                     />
                 </section>
             </div>

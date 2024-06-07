@@ -1,14 +1,7 @@
-import { TOOL_VALUE } from "@/constants";
-import { EditableObject, ExportableEditorObject } from "@/types/editorObject.type";
+import { SeatMapObject } from "@/types/editorObject.type";
 import { fabric } from "fabric";
 
-export const ObjectType = {
-    // -----------------------------------------------
-    SECTOR: "sector", // is also an editor object
-    SEAT: "seat", // is also an editor object
-    VENUE: "venue", // artboard
-    ASSET: "asset", // image ...
-    // -----------------------------------------------
+export const FabricObjectTypeConstants = {
     FABRIC_GROUP: "group",
     FABRIC_TEXT: "i-text",
     FABRIC_IMAGE: "image",
@@ -17,14 +10,30 @@ export const ObjectType = {
     FABRIC_RECT: "rect",
     FABRIC_PATH: "path",
     FABRIC_ACTIVE_SELECTION: "activeSelection"
-    // ...
-}
+} as const;
 
-export class ObjectUtil {
+type FabricObjectTypeKey = keyof typeof FabricObjectTypeConstants;
+
+export type FabricObjectType = typeof FabricObjectTypeConstants[FabricObjectTypeKey];
+
+export const SeatMapObjectTypeConstants = {
+    SECTOR: "sector",
+    SEAT: "seat",
+    VENUE: "venue",
+    ASSET: "asset",
+} as const;
+
+
+type SeatMapObjectTypeKey = keyof typeof SeatMapObjectTypeConstants;
+
+export type SeatMapObjectType = typeof SeatMapObjectTypeConstants[SeatMapObjectTypeKey];
+
+// -------------------------------------------------------------
+export class SeatMapUtil {
 
     public static getType(object: fabric.Object) {
-        if (object instanceof EditableObject) {
-            return (object as EditableObject).editableObjectType; // seat, sector... etc
+        if (object instanceof SeatMapObject) {
+            return (object as SeatMapObject).seatMapObjectType; // seat, sector... etc
         }
         return object.type; // return fabricJs native type (rect, i-text, etc...)
     }

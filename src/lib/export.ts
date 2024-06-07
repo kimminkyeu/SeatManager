@@ -1,10 +1,10 @@
 import { Venue } from "@/types/venue.type";
-import { ObjectType, ObjectUtil } from "./type-check";
+import { SeatMapObjectTypeConstants, SeatMapUtil } from "./type-check";
 import { Assert } from "./assert";
-import { ExportableEditorObject } from "@/types/editorObject.type";
 import { CircleShapeExport, ImageExport, ImageHtmlTag, RectangleShapeExport, SeatHtmlTag, SeatMap, SeatMapJsonForFrontendRendering, SeatMappingData, SectorExport, ShapeExport, eShapeExportType } from "@/types/export.type";
 import { cloneDeep } from "lodash";
 import { fabric } from "fabric";
+import { ExportableSeatMapObject } from "@/types/editorObject.type";
 
 export const saveStringToLocalDisk = (fileName: string, content: string) => {
     // Create element with <a> tag
@@ -38,16 +38,17 @@ export function createSeatMapV1(
     const images: ImageExport[] = [];
 
     canvas.forEachObject((object: fabric.Object) => {
-        const type = ObjectUtil.getType(object);
-        
+        const type = SeatMapUtil.getType(object);
+
         switch(type) {
             // ------------------------------------
-            case (ObjectType.VENUE):
+            case (SeatMapObjectTypeConstants.VENUE):
                 break;
 
             // ------------------------------------
-            case (ObjectType.SECTOR):
-                const sector = (object as ExportableEditorObject).export({
+            case (SeatMapObjectTypeConstants.SECTOR):
+                Assert.True(object instanceof ExportableSeatMapObject);
+                const sector = (object as ExportableSeatMapObject).exportAsSeatMapFormat({
                     left: venue.left,
                     top: venue.top
                 });
@@ -55,7 +56,8 @@ export function createSeatMapV1(
                 break;
 
             // ------------------------------------
-            case (ObjectType.SEAT):
+            case (SeatMapObjectTypeConstants.SEAT):
+                Assert.True(object instanceof ExportableSeatMapObject);
                 Assert.Never(
                     "Seat은 반드시 Sector(구역)에 소속되어야 합니다. \
                                Canvas 안에 개별적인 Seat가 존재해선 안됩니다!"
@@ -63,7 +65,7 @@ export function createSeatMapV1(
                 break;
 
             // ------------------------------------
-            case (ObjectType.FABRIC_IMAGE):
+            case (SeatMapObjectTypeConstants.FABRIC_IMAGE):
                 const img = (object as fabric.Image);
 
                 const prevLeft = img.left;

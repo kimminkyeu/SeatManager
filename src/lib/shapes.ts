@@ -10,7 +10,7 @@ import { PREVIEW_OPACITY, COLORS, SHAPE_SIZE, TOOL_VALUE } from "@/constants";
 import { Assert } from "./assert";
 import { ICircleOptions, IObjectOptions, IRectOptions, ITextOptions } from "fabric/fabric-impl";
 import { Sector, SectorEditingAttribute } from "@/types/sector.type";
-import { ObjectType, ObjectUtil } from "./type-check";
+import { FabricObjectType, FabricObjectTypeConstants, SeatMapObjectTypeConstants, SeatMapUtil } from "./type-check";
 import { Seat } from "@/types/seat.type";
 
 export const createCircle = (
@@ -69,21 +69,21 @@ export const createText = (
   } as fabric.ITextOptions);
 };
 
-export function createShape<T> (
-  shapeType: string,
+export function createShape (
+  shapeType: FabricObjectType,
   pointer?: PointerEvent,
   options?: IObjectOptions,
 ) {
 
   switch (shapeType) {
 
-    case ObjectType.FABRIC_CIRCLE:
+    case FabricObjectTypeConstants.FABRIC_CIRCLE:
       return createCircle(pointer, options);
 
-    case ObjectType.FABRIC_TEXT:
+    case FabricObjectTypeConstants.FABRIC_TEXT:
       return createText("double click to type...", pointer, options);
 
-    case ObjectType.FABRIC_RECT:
+    case FabricObjectTypeConstants.FABRIC_RECT:
       return createRectangle(pointer, options);
   
     default:
@@ -146,9 +146,9 @@ export const modifyObject = ({
       return;
     }
 
-    switch (ObjectUtil.getType(selectedElement)) {
+    switch (SeatMapUtil.getType(selectedElement)) {
 
-      case (ObjectType.FABRIC_GROUP):
+      case (FabricObjectTypeConstants.FABRIC_GROUP):
         modifyShapeInternal(selectedElement, property, value);
         (selectedElement as fabric.Group)
           .getObjects()
