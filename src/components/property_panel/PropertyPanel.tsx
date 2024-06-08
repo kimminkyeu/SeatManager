@@ -14,7 +14,7 @@ import { Updater } from "use-immer";
 import { Separator } from "@/common-ui/ui/separator";
 import VenueData from "./properties/VenueData";
 import { Venue, VenueEditingAttributes } from "@/types/venue.type";
-import { createHtmlView_MimicFrontend, createSeatMapV1, renderTags_MimicServer, setSeatmapPreviewPageEvent_v2 } from "@/lib/export";
+import { createHtmlView_MimicFrontend, createSeatMapV1, renderTags_MimicServer, saveStringToLocalDisk, setSeatmapPreviewPageEvent_v2 } from "@/lib/export";
 import { Assert } from "@/lib/assert";
 
 
@@ -174,7 +174,10 @@ const PropertyPanel = ({
             Assert.NonNull(fabricRef.current);
             Assert.NonNull(venueRef.current);
             const seatMap = createSeatMapV1(fabricRef.current, venueRef.current)
-            console.log(seatMap);
+            saveStringToLocalDisk(
+              `${seatMap.venueId}.json`,
+               JSON.stringify(seatMap, null, 2)
+              )
           }}
         />
         <HtmlPreview

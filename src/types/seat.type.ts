@@ -108,7 +108,8 @@ export class Seat extends ExportableSeatMapObject {
                     seatRow: this.seatRow,
                     seatCol: this.seatCol,
                     seatShape: {
-                        type: eShapeExportType.CIRCLE,
+                        // type: eShapeExportType.CIRCLE,
+                        type: FabricObjectTypeConstants.FABRIC_CIRCLE,
                         fill: innerCircle.fill as string,
                         cx: innerCircle.getCenterPoint().x,
                         cy: innerCircle.getCenterPoint().y,
@@ -131,7 +132,8 @@ export class Seat extends ExportableSeatMapObject {
                     seatRow: this.seatRow,
                     seatCol: this.seatCol,
                     seatShape: {
-                        type: eShapeExportType.RECTANGLE,
+                        type: FabricObjectTypeConstants.FABRIC_RECT,
+                        // type: eShapeExportType.RECTANGLE,
                         fill: innerRect.fill as string,
                         x: innerRect.left,
                         y: innerRect.top,

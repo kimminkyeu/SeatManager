@@ -56,7 +56,8 @@ export enum eShapeExportType {
 }
 
 export interface ShapeExport {
-    type: eShapeExportType
+    // type: eShapeExportType
+    type: string,
 }
 
 export interface HTMLSelectable extends ShapeExport {

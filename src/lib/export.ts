@@ -80,7 +80,7 @@ export function createSeatMapV1(
                 Assert.NonNull(img.top);
 
                 images.push({
-                    type: eShapeExportType.IMAGE,
+                    type: FabricObjectTypeConstants.FABRIC_IMAGE,
                     x: img.left,
                     y: img.top,
                     width: img.getScaledWidth(),
@@ -127,7 +127,7 @@ export function renderTags_MimicServer(seatMap: SeatMap)
             const shapeTypeEnum = seat.seatShape.type;
             switch(shapeTypeEnum) {
 
-                case eShapeExportType.CIRCLE:
+                case FabricObjectTypeConstants.FABRIC_CIRCLE:
                     const circle = (seat.seatShape as CircleShapeExport);
                     seatTags.push(`<circle 
                                                 id="${seat.seatId}" 
@@ -144,7 +144,7 @@ export function renderTags_MimicServer(seatMap: SeatMap)
                     })
                     break;
 
-                case eShapeExportType.RECTANGLE:
+                case FabricObjectTypeConstants.FABRIC_RECT:
                     const rect = (seat.seatShape as RectangleShapeExport);
                     seatTags.push(`<rect
                                                 id="${seat.seatId}" 
