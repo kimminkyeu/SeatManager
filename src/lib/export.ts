@@ -2,9 +2,8 @@ import { Venue } from "@/types/venue.type";
 import { FabricObjectTypeConstants, SeatMapObjectTypeConstants, SeatMapUtil } from "./type-check";
 import { Assert } from "./assert";
 import { CircleShapeExport, ImageExport, ImageHtmlTag, RectangleShapeExport, SeatHtmlTag, SeatMap, SeatMapJsonForFrontendRendering, SeatMappingData, SectorExport, ShapeExport, eShapeExportType } from "@/types/export.type";
-import { cloneDeep } from "lodash";
 import { fabric } from "fabric";
-import { ExportableSeatMapObject } from "@/types/editorObject.type";
+import { ExportableSeatMapObject } from "@/types/ExportableSeatMapObject.type";
 
 export const saveStringToLocalDisk = (fileName: string, content: string) => {
     // Create element with <a> tag
@@ -31,8 +30,8 @@ export function createSeatMapV1(
     venue: Venue,
 ): SeatMap {
 
-    Assert.NonNull(venue.width, "venue의 width가 null입니다.");
-    Assert.NonNull(venue.height, "venue의 height가 null입니다.");
+    Assert.NonNull(venue.width,"김민규", "venue의 width가 null입니다.");
+    Assert.NonNull(venue.height,"김민규", "venue의 height가 null입니다.");
 
     const sectors: SectorExport[] = [];
     const images: ImageExport[] = [];
@@ -47,7 +46,7 @@ export function createSeatMapV1(
 
             // ------------------------------------
             case (SeatMapObjectTypeConstants.SECTOR):
-                Assert.True(object instanceof ExportableSeatMapObject);
+                Assert.True(object instanceof ExportableSeatMapObject,"김민규");
                 const sector = (object as ExportableSeatMapObject).exportAsSeatMapFormat({
                     left: venue.left,
                     top: venue.top
@@ -57,8 +56,9 @@ export function createSeatMapV1(
 
             // ------------------------------------
             case (SeatMapObjectTypeConstants.SEAT):
-                Assert.True(object instanceof ExportableSeatMapObject);
+                Assert.True(object instanceof ExportableSeatMapObject,"김민규");
                 Assert.Never(
+                    "김민규",
                     "Seat은 반드시 Sector(구역)에 소속되어야 합니다. \
                                Canvas 안에 개별적인 Seat가 존재해선 안됩니다!"
                 );
@@ -76,8 +76,8 @@ export function createSeatMapV1(
 
                 img.setOptions({ left: adjustedLeft, top: adjustedTop }); // 위치 임시 조정.
 
-                Assert.NonNull(img.left);
-                Assert.NonNull(img.top);
+                Assert.NonNull(img.left,"김민규");
+                Assert.NonNull(img.top,"김민규");
 
                 images.push({
                     type: FabricObjectTypeConstants.FABRIC_IMAGE,
@@ -98,7 +98,7 @@ export function createSeatMapV1(
                  * Sector, Seat, Image가 아닌 farbic navive type은 애초에 그릴 수 없다. 
                  * ( ex. fabric.Group, Circle, Freeform, Path, etc.. )
                  */
-                Assert.Never(`지원하지 않는 타입입니다. type:${type}`);
+                Assert.Never("김민규",`지원하지 않는 타입입니다. type:${type}`);
         }
     });
 
@@ -160,7 +160,7 @@ export function renderTags_MimicServer(seatMap: SeatMap)
                     break;
                 
                 default:
-                    Assert.Never(`지원하지 않는 seat shape type 입니다. type:${seat.seatShape.type}`);
+                    Assert.Never("김민규",`지원하지 않는 seat shape type 입니다. type:${seat.seatShape.type}`);
                     break;
             }
         });

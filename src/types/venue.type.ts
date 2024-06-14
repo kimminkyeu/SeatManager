@@ -5,10 +5,9 @@
  */
 
 import { FabricObjectTypeConstants, SeatMapObjectTypeConstants } from "@/lib/type-check";
-import { EditableSeatMapObject, SeatMapObjectOptions } from "./editorObject.type";
 import { Assert } from "@/lib/assert";
-import { IGroupOptions } from "fabric/fabric-impl";
-import assert from "assert";
+import { EditableSeatMapObject } from "./EditableSeatMapObject.type";
+import { SeatMapObjectOptions } from "./LabeldSeatMapObject.type";
 
 
 // Omit : https://stackoverflow.com/questions/48215950/exclude-property-from-type
@@ -43,7 +42,7 @@ export class Venue extends EditableSeatMapObject {
 
     // ------------------------------------------------------------------------
     // data format for Right sidebar's React.State
-    public override extractEditableState() {
+    public override extractEditingState() {
         return {
             type: "VenueEditingAttribute",
             venueId: this._venueId,
@@ -54,7 +53,7 @@ export class Venue extends EditableSeatMapObject {
      * @deprecated 현재는 사용 금지이나, 나중에 추가될 예정임.
      */
     public override get seatMapObjectProperty(): any {
-        Assert.Never("Venue는 현재는 Edit 기능 + 복붙 기능 없기 때문에, object로 변환할 필요가 없습니다.");
+        Assert.Never("김민규","Venue는 현재는 Edit 기능 + 복붙 기능 없기 때문에, object로 변환할 필요가 없습니다.");
         return null;
     }
 
@@ -62,21 +61,21 @@ export class Venue extends EditableSeatMapObject {
      * @deprecated 현재는 사용 금지이나, 나중에 추가될 예정임.
      */
     public override toObject(propertiesToInclude?: string[] | undefined) {
-        Assert.Never("Venue는 현재는 Edit 기능 + 복붙 기능 없기 때문에, object로 변환할 필요가 없습니다.");
+        Assert.Never("김민규","Venue는 현재는 Edit 기능 + 복붙 기능 없기 때문에, object로 변환할 필요가 없습니다.");
         return null;
     }
 
     // ------------------------------------------------------------------------
-    public override AfterFabricObjectRotatingEvent(): void {}
+    public override afterRotating(): void {}
 
-    public override AfterFabricObjectScalingEvent(): void {
+    public override afterScaling(): void {
         // hide text while scaling
         this.updateInnerTextVisibility(false);
     }
 
-    public override AfterFabricObjectModifiedEvent(): void {
+    public override afterModified(): void {
         // recreate inner text object
-        Assert.NonNull(this._innerLabelText);
+        Assert.NonNull(this._innerLabelText,"김민규");
 
         this.removeWithUpdate(this._innerLabelText);
         const text = this._createInternalFabricObject(
@@ -148,6 +147,6 @@ export class Venue extends EditableSeatMapObject {
         );
 
         this._venueId = venueId;
-        this.AfterFabricObjectModifiedEvent();
+        this.afterModified();
     }
 }

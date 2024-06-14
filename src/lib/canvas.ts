@@ -20,8 +20,9 @@ import { Assert } from "./assert";
 import { createSectorPreview } from "./sector";
 import { Seat } from "@/types/seat.type";
 import { Sector } from "@/types/sector.type";
-import { SeatMapObjectTypeConstants, SeatMapUtil } from "./type-check";
-import { EditableSeatMapObject } from "@/types/editorObject.type";
+import { FabricObjectTypeConstants, SeatMapObjectTypeConstants, SeatMapUtil } from "./type-check";
+import { ExportableSeatMapObject } from "@/types/ExportableSeatMapObject.type";
+import { EditableSeatMapObject } from "@/types/EditableSeatMapObject.type";
 
 // initialize fabric canvas
 export const initializeFabric = ({
@@ -63,13 +64,13 @@ export const handleCanvasMouseDown = ({
   previewSeatShapeRef,
 }: CanvasMouseDown) => {
 
-  Assert.NonNull(selectedToolValueRef.current, "선택된 툴은 반드시 있어야 합니다.");
+  Assert.NonNull(selectedToolValueRef.current,"김민규", "선택된 툴은 반드시 있어야 합니다.");
 
   const pointer = fabricCanvas.getPointer(options.e);
   const target = fabricCanvas.findTarget(options.e, false);
   const event = options.e;
   const elem = document.getElementById("fabric-canvas");
-  Assert.NonNull(elem);
+  Assert.NonNull(elem,"김민규");
   const currentX = event.clientX - elem.getBoundingClientRect().x;
   const currentY = event.clientY - elem.getBoundingClientRect().y;
 
@@ -114,7 +115,7 @@ export const handleCanvasMouseDown = ({
       break; // *****************************************************
 
     default: // create single seat
-      Assert.Never("아직 미구현된 기능입니다.");
+      Assert.Never("김민규","아직 미구현된 기능입니다.");
       // createdObj = new Seat(selectedToolValueRef.current, 0, 0);
       // createdSeat = createSeat(
       //   selectedToolValueRef.current,
@@ -157,14 +158,14 @@ export const createEditingAttribute = (source: fabric.Object): (EditingAttribute
 
     switch (SeatMapUtil.getType(source)) {
 
+      case (SeatMapObjectTypeConstants.VENUE):
+        /** Fall through */
       case (SeatMapObjectTypeConstants.SECTOR):
         /** Fall through */
       case (SeatMapObjectTypeConstants.SEAT):
-        /** Fall through */
-      case (SeatMapObjectTypeConstants.VENUE):
-        return (source as EditableSeatMapObject).extractEditableState();
+        return (source as EditableSeatMapObject).extractEditingState();
 
-      case (SeatMapObjectTypeConstants.FABRIC_GROUP):
+      case (FabricObjectTypeConstants.FABRIC_GROUP):
         // TODO: 그룹은 일단 첫번째 자식만 띄우지만, 나중엔 공통 요소를 띄우는 걸로 변경해도 될 것 같다..
         const objs = (source as fabric.Group).getObjects();
         return createShapeEditingAttribute(objs[0]);

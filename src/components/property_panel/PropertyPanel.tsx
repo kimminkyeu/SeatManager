@@ -122,7 +122,7 @@ const PropertyPanel = ({
           ) 
            &&
           <Color
-            inputRef={colorInputRef}
+            // inputRef={colorInputRef}
             editingElementUiAttributes={editingElementUiAttributes as ShapeEditingAttribute}
             placeholder="color"
             attributeType="fill"
@@ -171,8 +171,8 @@ const PropertyPanel = ({
         <Export
           label="JSON으로 내보내기 (압축v2)"
           handleExport={() => {
-            Assert.NonNull(fabricRef.current);
-            Assert.NonNull(venueRef.current);
+            Assert.NonNull(fabricRef.current,"김민규");
+            Assert.NonNull(venueRef.current,"김민규");
             const seatMap = createSeatMapV1(fabricRef.current, venueRef.current)
             saveStringToLocalDisk(
               `${seatMap.venueId}.json`,
@@ -183,8 +183,8 @@ const PropertyPanel = ({
         <HtmlPreview
           label="HTML 미리보기 (압축v2)"
           createHtmlPreview={() => {
-            Assert.NonNull(fabricRef.current);
-            Assert.NonNull(venueRef.current);
+            Assert.NonNull(fabricRef.current,"김민규");
+            Assert.NonNull(venueRef.current,"김민규");
             const seatMap = createSeatMapV1(fabricRef.current, venueRef.current);
             const renderedTags = renderTags_MimicServer(seatMap);
             const html = createHtmlView_MimicFrontend(renderedTags);

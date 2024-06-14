@@ -87,7 +87,7 @@ export function createShape (
       return createRectangle(pointer, options);
   
     default:
-      Assert.Never(`지원하지 않는 Shape입니다: ${shapeType}`);
+      Assert.Never("김민규",`지원하지 않는 Shape입니다: ${shapeType}`);
   }
 };
 

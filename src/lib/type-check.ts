@@ -1,4 +1,4 @@
-import { SeatMapObject } from "@/types/editorObject.type";
+import { FabricEventResponsive, LabeldSeatMapObject } from "@/types/LabeldSeatMapObject.type";
 import { fabric } from "fabric";
 
 export const FabricObjectTypeConstants = {
@@ -33,9 +33,17 @@ export type SeatMapObjectType = typeof SeatMapObjectTypeConstants[SeatMapObjectT
 export class SeatMapUtil {
 
     public static getType(object: fabric.Object) {
-        if (object instanceof SeatMapObject) {
-            return (object as SeatMapObject).seatMapObjectType; // seat, sector... etc
+        if (object instanceof LabeldSeatMapObject) {
+            return (object as LabeldSeatMapObject).seatMapObjectType; // seat, sector... etc
         }
         return object.type; // return fabricJs native type (rect, i-text, etc...)
     }
+}
+
+export function isResponsiveToFabricEvent(object: any)
+    : object is FabricEventResponsive {
+    if (object instanceof LabeldSeatMapObject) {
+        return true
+    }
+    return false;
 }

@@ -15,7 +15,9 @@
  * html 좌석 tag에 매칭되는 id 문자열과 row, col 정보들 (--IMPORTANT--)
  */
 
+import { FabricObjectType } from "@/lib/type-check";
 import { CircleSeatObjectData } from "./seat.type";
+import { ExportableSeatMapObject } from "./ExportableSeatMapObject.type";
 
 // 이건 서버용이다. 그저 테스트용임.
 export interface SeatMapJsonForFrontendRendering {
@@ -57,7 +59,7 @@ export enum eShapeExportType {
 
 export interface ShapeExport {
     // type: eShapeExportType
-    type: string,
+    type: FabricObjectType,
 }
 
 export interface HTMLSelectable extends ShapeExport {

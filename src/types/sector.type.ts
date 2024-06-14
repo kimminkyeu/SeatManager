@@ -7,9 +7,11 @@ import { Assert } from "@/lib/assert";
 import { createText } from "@/lib/shapes";
 import { createShapeEditingAttribute } from "@/lib/canvas";
 import { FabricObjectType, FabricObjectTypeConstants, SeatMapObjectTypeConstants, SeatMapUtil } from "@/lib/type-check";
-import { EditableStateExtractable, PositionAdjustment, FabricObjectEventReaction, ExportableSeatMapObject, SeatMapObjectOptions } from "./editorObject.type";
+import { PositionAdjustment, ExportableSeatMapObject } from "./ExportableSeatMapObject.type";
 import { cloneDeep } from "lodash";
 import { SeatExport, SeatMappingData, SectorExport } from "./export.type";
+import { EditingStateExtractable } from "./EditableSeatMapObject.type";
+import { SeatMapObjectOptions } from "./LabeldSeatMapObject.type";
 
 // Omit : https://stackoverflow.com/questions/48215950/exclude-property-from-type
 export interface SectorEditingAttribute extends Omit<ShapeEditingAttribute, 'type'> {
@@ -19,7 +21,7 @@ export interface SectorEditingAttribute extends Omit<ShapeEditingAttribute, 'typ
     sectorGapY: number;
 }
 
-export class Sector extends ExportableSeatMapObject implements EditableStateExtractable {
+export class Sector extends ExportableSeatMapObject {
 
     private static readonly _staticFontSize: number = 12;
 
@@ -86,7 +88,7 @@ export class Sector extends ExportableSeatMapObject implements EditableStateExtr
 
     // ---------------------------------------------------------------------
     // data format for Right sidebar's React.State
-    public override extractEditableState(): EditingAttribute {
+    public override extractEditingState(): EditingAttribute {
         const shapeAttribute = createShapeEditingAttribute(this as fabric.Object) as EditingAttribute;
         const sectorAttribute = (shapeAttribute as SectorEditingAttribute);
         sectorAttribute.type = "SectorEditingAttribute";
@@ -135,12 +137,11 @@ export class Sector extends ExportableSeatMapObject implements EditableStateExtr
     }
 
     // ---------------------------------------------------------------------
-    public override AfterFabricObjectModifiedEvent(): void {
-        console.log("Sector AfterFabricObjectModifiedEvent()");
+    public override afterModified(): void {
         // change text angle.
-        if (this.angle) {
+        if (undefined !== this.angle) {
             this.getSeats().forEach((seat: Seat) => {
-                seat.AfterFabricObjectModifiedEvent();
+                seat.afterModified();
             })
         }
     }
@@ -150,7 +151,7 @@ export class Sector extends ExportableSeatMapObject implements EditableStateExtr
         let seats: Seat[] = [];
         this.getObjects().forEach((o: fabric.Object) => {
             if (SeatMapObjectTypeConstants.SEAT === SeatMapUtil.getType(o)) {
-                Assert.True(o instanceof Seat);
+                Assert.True(o instanceof Seat,"김민규");
                 seats.push(o as Seat);
             }
         })
@@ -288,8 +289,8 @@ export class Sector extends ExportableSeatMapObject implements EditableStateExtr
         });
         const seats = this.getSeats();
         seats.forEach((seat: Seat, idx: number) => {
-            Assert.NonNull(seat.left, "obj.left값이 null이면 안됩니다.");
-            Assert.NonNull(seat instanceof Seat, "Sector 내부 객체들은 모두 Seat객체여야 합니다.");
+            Assert.NonNull(seat.left,"김민규", "obj.left값이 null이면 안됩니다.");
+            Assert.True(seat instanceof Seat,"김민규", "Sector 내부 객체들은 모두 Seat객체여야 합니다.");
             const left = seat.left + ((seat.seatCol - 1) * (this._gapX - this._gapPrev));
             seat.setOptions({left: left});
         });
@@ -317,8 +318,8 @@ export class Sector extends ExportableSeatMapObject implements EditableStateExtr
         });
 
         this.getSeats().forEach((seat: Seat) => {
-            Assert.NonNull(seat.top, "obj.top값이 null이면 안됩니다.");
-            Assert.NonNull(seat instanceof Seat, "Sector 내부 객체들은 모두 Seat객체여야 합니다.");
+            Assert.NonNull(seat.top, "김민규","obj.top값이 null이면 안됩니다.");
+            Assert.NonNull(seat instanceof Seat,"김민규", "Sector 내부 객체들은 모두 Seat객체여야 합니다.");
             const top = seat.top + ((seat.seatRow - 1) * (this._gapY - this._gapPrev));
             seat.setOptions({top: top});
         });
@@ -352,7 +353,7 @@ export class Sector extends ExportableSeatMapObject implements EditableStateExtr
             const dest = raw.destroy() as Sector;
             dest.getSeats().forEach((obj: fabric.Object) => {
                 if (SeatMapObjectTypeConstants.SEAT === SeatMapUtil.getType(obj)) {
-                    Assert.True(obj instanceof Seat);
+                    Assert.True(obj instanceof Seat, "김민규");
                     collector(obj as Seat);
                 }
             });

@@ -1,6 +1,8 @@
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const path = require("path");
 const webpack = require("webpack");
+const dotenv = require("dotenv");
+dotenv.config();
 
 module.exports = {
   experiments: {
@@ -29,16 +31,6 @@ module.exports = {
           },
         },
       },
-      {
-        test: /\.(script)$/i,
-        use: {
-          loader: 'file-loader',
-          options: {
-            publicPath: '/',
-            name: 'preview.script'
-          }
-        }
-      }
     ],
   },
   // watch: NODE_ENV === 'prod',

@@ -4,7 +4,7 @@ import { fabric } from 'fabric';
 import { handleCanvasMouseDown, handleCanvasObjectScaling, handleCanvasSelectionCreated, handleCanvasSelectionUpdated, handleCanvasZoom, handleCanvasResize, initializeFabric } from '@/lib/canvas';
 import { Canvas } from "@/components/Canvas";
 import { PropertyPanel } from "@/components/property_panel/PropertyPanel";
-import { EditingAttribute, ShapeEditingAttribute, ToolElement } from "@/types/canvas.type";
+import { EditingAttribute, ToolElement } from "@/types/canvas.type";
 import { Navbar } from "@/components/Navbar";
 import { TOOL_ELEMENT_PANNING, TOOL_ELEMENT_SELECT, TOOL_ELEMENT_TEXT, TOOL_ELEMENT_DEFAULT, TOOL_VALUE, TOOL_ELEMENT_SECTOR, SEAT_WIDTH, SEAT_HEIGHT, PREVIEW_OPACITY, COLORS, GRID_COLOR, DEFAULT_BACKGROUND_COLOR, EDITMODE_BACKGROUND_COLOR, } from "@/constants";
 import { createShape, handleImageUpload } from "@/lib/shapes";
@@ -12,17 +12,14 @@ import { handleDelete, groupActiveSelection, handleKeyDown, ungroupActiveSelecti
 import { undo, redo } from "@/lib/history";
 import { Assert } from "@/lib/assert";
 import { useImmer } from "use-immer";
-import { FabricObjectType, FabricObjectTypeConstants, SeatMapObjectTypeConstants, SeatMapUtil } from "@/lib/type-check";
+import { FabricObjectType, FabricObjectTypeConstants, SeatMapObjectTypeConstants, SeatMapUtil, isResponsiveToFabricEvent } from "@/lib/type-check";
 import { Sector } from "@/types/sector.type";
-import { EditableSeatMapObject, ExportableSeatMapObject, PositionAdjustment, SeatMapObject } from "@/types/editorObject.type";
 
 import "@/preview.script";
 import { Venue } from "@/types/venue.type";
-import { CircleSeatObjectData, Seat } from "@/types/seat.type";
-import _ from "lodash";
-import { SeatHtmlTag, ImageHtmlTag, SeatMapJsonForFrontendRendering, SeatMappingData, SeatMapJsonCompressedFormat } from "@/types/export.type";
-import { setSeatmapPreviewPageEvent_v1, saveStringToLocalDisk } from "@/lib/export";
-import SeatData from "./property_panel/properties/SeatData";
+import { Seat } from "@/types/seat.type";
+import { LabeldSeatMapObject } from "@/types/LabeldSeatMapObject.type";
+import { EditableSeatMapObject } from "@/types/EditableSeatMapObject.type";
 
 // 추가적으로, https://github.com/fkhadra/react-contexify 이 라이브러리 써서 Custum Context Menu 구현합시다.
 // 아니면 https://github.com/anandsimmy/custom-context-menu/blob/main/src/MyCusomtContextMenu.js#L4 이 코드 참고해서 직접 해도 되고..
@@ -98,7 +95,7 @@ function Editor(): ReactElement {
     const toggleEditingMode = () => {
 
         const canvas = fabricCanvasRef.current;
-        Assert.NonNull(canvas);
+        Assert.NonNull(canvas, "김민규");
 
         // toogle boolean ref
         isEditingModeRef.current = !isEditingModeRef.current;
@@ -152,9 +149,10 @@ function Editor(): ReactElement {
         // ---------------------------------------------------------
         // 2. 편집 모드 활성화라면, 현재 선택된 Sector를 해체한다.
         if (true === isEditingMode) {
-            Assert.NonNull(selectedSector);
+            Assert.NonNull(selectedSector, "김민규");
             Assert.True(
                 (SeatMapObjectTypeConstants.SECTOR === SeatMapUtil.getType(selectedSector)),
+                "김민규",
                 "편집 대상 Object는 Sector여야 합니다."
             );
 
@@ -164,7 +162,7 @@ function Editor(): ReactElement {
             const selection = new fabric.ActiveSelection(undefined, { canvas: canvas });
             canvas.remove(selectedSector);
             (selectedSector.destroy() as Sector).getSeats().forEach((seat: Seat) => {
-                Assert.True(seat instanceof Seat);
+                Assert.True(seat instanceof Seat, "김민규");
                 const copiedSeat = seat.constructNewCopy();
 
                 canvas.add(copiedSeat);
@@ -179,8 +177,9 @@ function Editor(): ReactElement {
         // ---------------------------------------------------------
         // 3. 편집 모드를 종료한다면, 현재 편집중인 모든 좌석들을 하나의 섹터로 재구성 한다.
         if (false === isEditingMode) {
-            Assert.NonNull(editingSectorRef.current);
-            Assert.NonNull(editingSeatsRef.current);
+
+            Assert.NonNull(editingSectorRef.current, "김민규");
+            Assert.NonNull(editingSeatsRef.current, "김민규");
 
 
             const newSector = new Sector(
@@ -211,10 +210,10 @@ function Editor(): ReactElement {
 
         console.log(`setActiveEditorToolTo( ${toolElem.value} )`);
 
-        Assert.NonNull(fabricCanvasRef.current);
-        Assert.NonNull(previewCanvasRef.current);
-        Assert.NonNull(gridCanvasRef.current);
-        Assert.NonNull(toolElem.value);
+        Assert.NonNull(fabricCanvasRef.current,"김민규");
+        Assert.NonNull(previewCanvasRef.current,"김민규");
+        Assert.NonNull(gridCanvasRef.current,"김민규");
+        Assert.NonNull(toolElem.value,"김민규");
 
         // ---------------------------------------------------------------------
         // set-up initial state
@@ -270,7 +269,6 @@ function Editor(): ReactElement {
 
             // ---- Tool: Single Object Creation (Text, Shape) -----------------------------
             default:
-                // Assert.Never("현재 일반 객체 생성은 금지되어 있습니다. 개발중입니다.");
 
                 selectedToolValueRef.current = toolElem?.value as string;
                 setObjectSelectable(fabricCanvasRef.current, false);
@@ -357,16 +355,16 @@ function Editor(): ReactElement {
         // -----------------------------------------------------------------------
         // fabric default tool setting
         setActiveToolUiState(TOOL_ELEMENT_DEFAULT);
-        Assert.True(typeof TOOL_ELEMENT_DEFAULT.value === "string", "초기 설정 도구는 value가 string 타입이여야 합니다.");
+        Assert.True(typeof TOOL_ELEMENT_DEFAULT.value === "string","김민규", "초기 설정 도구는 value가 string 타입이여야 합니다.");
         selectedToolValueRef.current = TOOL_ELEMENT_DEFAULT.value as string;
 
         // -----------------------------------------------------------------------
         // Create Venue Single Object (+ Disbale Copy-paste)
-        Assert.NonNull(fabricCanvasRef.current, "fabric canvas가 null일 수 없습니다.");
+        Assert.NonNull(fabricCanvasRef.current, "김민규", "fabric canvas가 null일 수 없습니다.");
         const venueWidth = fabricCanvasRef.current?.width;
-        Assert.NonNull(venueWidth, "fabric canvas와 width가 null일 수 없습니다.");
+        Assert.NonNull(venueWidth, "김민규","fabric canvas와 width가 null일 수 없습니다.");
         const venueHeight = fabricCanvasRef.current?.height;
-        Assert.NonNull(venueHeight, "fabric canvas와 height가 null일 수 없습니다.");
+        Assert.NonNull(venueHeight,"김민규", "fabric canvas와 height가 null일 수 없습니다.");
 
         const venue = new Venue(
             "공연장 1", 
@@ -379,7 +377,11 @@ function Editor(): ReactElement {
         venueRef.current = venue;
 
         // -----------------------------------------------------------------
+
+
         fabricCanvas.on("selection:created", function (options: fabric.IEvent) {
+
+            // ----------------------------------------------------------
             console.log(`fabric: [selection:created]`);
             handleCanvasSelectionCreated({ // for editing Attribute
                 options,
@@ -457,9 +459,8 @@ function Editor(): ReactElement {
         // -----------------------------------------------------------------
         // After event
         fabricCanvas.on("object:modified", (options) => {
-            const target = options.target as fabric.Object;
-            if (target instanceof SeatMapObject) {
-                (target as SeatMapObject).AfterFabricObjectModifiedEvent();
+            if (true === isResponsiveToFabricEvent(options.target)) {
+                options.target.afterModified();
             }
         });
 
@@ -473,9 +474,10 @@ function Editor(): ReactElement {
              * @note 섹터 편집 모드에서 좌석이 삭제될 경우, 복구시 싱크를 맞춰야 한다.
              */
             if (true === isEditingModeRef.current) {
-                const removed = options.target as SeatMapObject;
+                const removed = options.target as LabeldSeatMapObject;
                 Assert.NonNull(
                     editingSeatsRef.current,
+                    "김민규",
                     "편집모드 중에는 editingSeatsRef가 반드시 존재해야 합니다!"
                 );
                 editingSeatsRef.current.delete(removed.objectId);
@@ -483,10 +485,8 @@ function Editor(): ReactElement {
         });
 
         fabricCanvas.on("object:rotating", (options) => {
-            // 내부 글자의 Angle을 회전시키기 위함.
-            const target = options.target as fabric.Object;
-            if (target instanceof SeatMapObject) {
-                (target as SeatMapObject).AfterFabricObjectRotatingEvent();
+            if (true === isResponsiveToFabricEvent(options.target)) {
+                options.target.afterRotating();
             }
         })
 
@@ -497,9 +497,8 @@ function Editor(): ReactElement {
                 options,
                 setEditingElementUiAttributes,
             });
-            const target = options.target as fabric.Object;
-            if (target instanceof SeatMapObject) {
-                (target as SeatMapObject).AfterFabricObjectScalingEvent();
+            if (true === isResponsiveToFabricEvent(options.target)) {
+                options.target.afterScaling();
             }
         });
 
@@ -542,7 +541,7 @@ function Editor(): ReactElement {
                     fabricCanvasRef.current?.setCursor("crosshair");
                     if (previewSeatShapeRef.current) { // mouse drag creation (마우스 끌기로 섹션 생성)
 
-                        Assert.True(previewSeatShapeRef.current instanceof fabric.Group, "Preview 객체가 그룹이 아닙니다. 객체 생성 부분을 체크해주세요.");
+                        Assert.True(previewSeatShapeRef.current instanceof fabric.Group, "김민규","Preview 객체가 그룹이 아닙니다. 객체 생성 부분을 체크해주세요.");
 
                         // 1. update Section preview rectangle
                         const previewSector = (previewSeatShapeRef.current as fabric.Group); 
@@ -577,7 +576,7 @@ function Editor(): ReactElement {
 
             if (options.e.shiftKey) {
                 /* Activate Temporal Panning */
-                Assert.True(typeof TOOL_ELEMENT_PANNING.value === "string", "panning 설정의 value는 반드시 string이여야 합니다.");
+                Assert.True(typeof TOOL_ELEMENT_PANNING.value === "string", "김민규","panning 설정의 value는 반드시 string이여야 합니다.");
                 selectedToolValueRef.current = TOOL_ELEMENT_PANNING.value as string;
             }
 
@@ -597,7 +596,7 @@ function Editor(): ReactElement {
 
         fabricCanvas.on("mouse:up", (options) => {
 
-            Assert.NonNull(fabricCanvasRef.current);
+            Assert.NonNull(fabricCanvasRef.current,"김민규");
 
             const pointer = fabricCanvas.getPointer(options.e);
 

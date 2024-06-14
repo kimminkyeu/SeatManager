@@ -112,6 +112,7 @@ export const handlePaste = (
 
     Assert.True(
         (canvas && (canvas instanceof fabric.Canvas)),
+        "김민규",
         "canvas가 유효한 Fabric Canvas가 아닙니다!",
     );
 
@@ -154,7 +155,7 @@ export const handlePaste = (
                                     break;
 
                                 case (SeatMapObjectTypeConstants.SEAT):
-                                    Assert.Never("아직 미구현된 기능입니다.");
+                                    Assert.Never("김민규","아직 미구현된 기능입니다.");
                                     break;
 
                                 case (FabricObjectTypeConstants.FABRIC_GROUP):

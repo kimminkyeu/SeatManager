@@ -6,9 +6,10 @@ import { Assert } from "@/lib/assert";
 import { createShapeEditingAttribute } from "@/lib/canvas";
 import { FabricObjectType, FabricObjectTypeConstants, SeatMapObjectTypeConstants, SeatMapUtil } from "@/lib/type-check";
 import { createShape, createText } from "@/lib/shapes";
-import { EditableStateExtractable, PositionAdjustment, FabricObjectEventReaction, ExportableSeatMapObject, SeatMapObject, SeatMapObjectOptions } from "./editorObject.type";
 import { CircleShapeExport, RectangleShapeExport, SeatExport, SeatMappingData, eShapeExportType } from "./export.type";
 import { DEFAULTS } from "@/constants";
+import { ExportableSeatMapObject, PositionAdjustment } from "./ExportableSeatMapObject.type";
+import { SeatMapObjectOptions } from "./LabeldSeatMapObject.type";
 
 export interface CircleSeatObjectData {
     cx: number;
@@ -64,7 +65,7 @@ export class Seat extends ExportableSeatMapObject {
     }
 
     // --------------------------------------------------------------------------
-    public override extractEditableState(): EditingAttribute {
+    public override extractEditingState(): EditingAttribute {
         const shapeAttribute = createShapeEditingAttribute(this as fabric.Object) as EditingAttribute;
         const SeatEditingAttribute = (shapeAttribute as SeatEditingAttributes);
         SeatEditingAttribute.type = "SeatEditingAttribute";
@@ -122,10 +123,10 @@ export class Seat extends ExportableSeatMapObject {
             case (FabricObjectTypeConstants.FABRIC_RECT):
                 const innerRect = (innerShape as Rect);
 
-                Assert.NonNull(innerRect.left, "좌석 내부 도형의 left가 null입니다");
-                Assert.NonNull(innerRect.top, "좌석 내부 도형의 top이 null입니다");
-                Assert.NonNull(innerRect.width, "좌석 내부 도형의 width가 null입니다");
-                Assert.NonNull(innerRect.height, "좌석 내부 도형의 height가 null입니다");
+                Assert.NonNull(innerRect.left, "김민규","좌석 내부 도형의 left가 null입니다");
+                Assert.NonNull(innerRect.top, "김민규","좌석 내부 도형의 top이 null입니다");
+                Assert.NonNull(innerRect.width, "김민규","좌석 내부 도형의 width가 null입니다");
+                Assert.NonNull(innerRect.height, "김민규","좌석 내부 도형의 height가 null입니다");
 
                 const exported_2: SeatExport<RectangleShapeExport> = {
                     seatId: this.objectId,
@@ -149,7 +150,7 @@ export class Seat extends ExportableSeatMapObject {
 
             // ---------------------------------------------
             default:
-                Assert.Never(`지원하지 않는 좌석 Shape입니다. shape: ${innerShape.type}`);
+                Assert.Never("김민규",`지원하지 않는 좌석 Shape입니다. shape: ${innerShape.type}`);
                 return {} as never;
         }
     }
@@ -172,12 +173,12 @@ export class Seat extends ExportableSeatMapObject {
             });
         }
         const ret = (copiedSeat.destroy() as Seat)._innerShape;
-        Assert.NonNull(ret, "Seat은 내부 innerShape 객체가 반드시 존재해야 합니다!");
+        Assert.NonNull(ret, "김민규","Seat은 내부 innerShape 객체가 반드시 존재해야 합니다!");
         return ret; 
     }
 
     // --------------------------------------------------------------------------
-    public override AfterFabricObjectModifiedEvent() {
+    public override afterModified() {
         this.updateTextAngleToCurrentViewAngle();
     }
 

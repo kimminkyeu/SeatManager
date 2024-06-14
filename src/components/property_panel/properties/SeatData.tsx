@@ -42,7 +42,7 @@ const SeatData = ({
     <section className='prose p-5 flex flex-col border-b border-primary-grey-200'>
       <h3 className=" prose-base">Seat</h3>
       <div className='flex flex-col gap-4'>
-        {SeatDataOptions.map((item) => (
+        {SeatDataOptions.map((item, index) => (
           <div
             key={item.label}
             className='flex flex-1 items-center gap-2 rounded-sm'

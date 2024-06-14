@@ -1,83 +1,31 @@
-import { ICircleOptions, IGroupOptions, IObjectOptions, ITextOptions } from "fabric/fabric-impl";
 import { fabric } from "fabric";
-import { v4 as uuidv4 } from 'uuid';
-import { EditingAttribute } from "./canvas.type";
+import { Constructable, WithObjectId } from "./WithObjectId.type";
 import { FabricObjectType, FabricObjectTypeConstants, SeatMapObjectType } from "@/lib/type-check";
+import { ICircleOptions, IGroupOptions, IObjectOptions, ITextOptions } from "fabric/fabric-impl";
 import { Assert } from "@/lib/assert";
-import { text } from "@/svgs/import";
-
-
-// Mixin type
-// https://devblogs.microsoft.com/typescript/announcing-typescript-2-2/
-
-export type Constructable = new (...args: any[]) => object;
-
-export function WithObjectId<BC extends Constructable>(Base: BC) {
-
-  return class extends Base {
-
-      private readonly _objectId = uuidv4();
-
-      public get objectId() { return this._objectId; }
-  };
-}
-
-
-export interface EditableStateExtractable {
-    /**
-    * @interface EditableStateExtractable
-    * @description 
-    * UI와 연동할 수 있는 State 값을 생성할 수 있도록 하는 Interface method입니다.
-    */
-    extractEditableState(): EditingAttribute;
-}
+import { v4 as uuidv4 } from 'uuid';
 
 /**
- * @description
- * fabric.js의 toObject 메소드를 재정의하기 위한 인터페이스
+ * 
  */
-export interface FabricToObjectMethodOverride {
-    toObject(propertiesToInclude?: string[] | undefined): any;
-    get seatMapObjectProperty() : any;
-    get seatMapObjectType(): any;
-}
-
-export interface PositionAdjustment {
-    left?: number, // canvas 위치가 아닌 Venue 위치 기준으로 조정해서 export 할 경우.
-    top?: number,
-}
-
-export interface SeatMapExportable {
-    /**
-     * @description
-     * 서버에 저장하기 위한 최소 데이터로 serialize export
-     * 
-     * @param adjustment
-     * Export할 때 오브젝트의 position 시작 기준점을 적용할 수 있습니다.
-     * 예를 들어, adjustment-leftStart가 10라면, 원래 left가 30일 경우 20으로 수정합니다.
-     *
-     */
-    exportAsSeatMapFormat(adjustment?: PositionAdjustment): any; // FINAL VERSION!
-}
-
-export interface FabricObjectEventReaction {
+export interface FabricEventResponsive {
     /** 
      * @description
-     * Callback to be called on fabric's "object:modified" event.
+     * Callback to be called after fabric's "object:modified" event.
      */
-    AfterFabricObjectModifiedEvent(): void;
+    afterModified(): void;
 
     /** 
     * @description
-    * Callback to be called on fabric's "object:scaling" event. 
+    * Callback to be called after fabric's "object:scaling" event. 
     */
-    AfterFabricObjectScalingEvent(): void;
+    afterScaling(): void;
 
     /** 
     * @description
-    * Callback to be called on fabric's "object:rotating" event. 
+    * Callback to be called after fabric's "object:rotating" event. 
     */
-    AfterFabricObjectRotatingEvent(): void;
+    afterRotating(): void;
 }
 
 export interface SeatMapObjectOptions {
@@ -93,24 +41,17 @@ export interface SeatMapObjectOptions {
 /**
  * 
  */
-export abstract class SeatMapObject extends WithObjectId(fabric.Group) implements FabricObjectEventReaction {
-
+export abstract class LabeldSeatMapObject extends WithObjectId(fabric.Group) implements FabricEventResponsive 
+    {
     // -------------------------------------------------------
     private static readonly DEAULT_LABEL_FONT_SIZE = 15;
 
+    // FabricEventResponsive
     // -------------------------------------------------------
-    // FabricObjectEventReaction
-    public AfterFabricObjectModifiedEvent(): void { 
-        console.log("AfterObjectModified()");
-    };
-
-    public AfterFabricObjectScalingEvent(): void { 
-        console.log("AfterObjectScaling()");
-    };
-
-    public AfterFabricObjectRotatingEvent(): void { 
-        console.log("AfterObjectRotating()");
-    };
+    // protected readonly eventResponse = new FabricEventResponse();
+    public afterModified(): void {};
+    public afterScaling(): void {};
+    public afterRotating(): void {};
 
     // -------------------------------------------------------
     // Shape & Labeled Text
@@ -168,6 +109,8 @@ export abstract class SeatMapObject extends WithObjectId(fabric.Group) implement
      */
     public get innerShapeType(): FabricObjectType { 
         if (this._innerShape) {
+            Assert.NonNull(this._innerShape.type,"김민규");
+            Assert.True(this._innerShape.type in FabricObjectTypeConstants,"김민규");
             return this._innerShape.type as FabricObjectType; // WARN!
         }
         return FabricObjectTypeConstants.UNDEFINED;
@@ -182,17 +125,17 @@ export abstract class SeatMapObject extends WithObjectId(fabric.Group) implement
 
     // ------------------------------------------------------------------
     // Methods to Control
-    public updateInnerTextContent(text: string) {
+    protected updateInnerTextContent(text: string) {
         // this._innerLabelText.text = text;
         this._innerLabelText?.set({ text: text });
         // this.addWithUpdate();
     }
 
-    public updateInnerTextAngle(angle: number) {
+    protected updateInnerTextAngle(angle: number) {
         this._innerLabelText?.set({ angle: angle });
     }
 
-    public updateInnerTextVisibility(visible: boolean) {
+    protected updateInnerTextVisibility(visible: boolean) {
         this._innerLabelText?.set({ visible: visible });
     }
 
@@ -206,6 +149,7 @@ export abstract class SeatMapObject extends WithObjectId(fabric.Group) implement
                 const circleOpt = (options as ICircleOptions);
                 Assert.True(
                     circleOpt?.radius !== undefined,
+                    "김민규",
                     "circle 오브젝트 생성시 radius를 반드시 option에 기입해주세요.",
                 )
                 console.log(options);
@@ -221,10 +165,12 @@ export abstract class SeatMapObject extends WithObjectId(fabric.Group) implement
             case FabricObjectTypeConstants.FABRIC_RECT:
                 Assert.True(
                     options?.width !== undefined,
+                    "김민규",
                     "rect 오브젝트 생성시 width를 반드시 option에 기입해주세요.",
                 )
                 Assert.True(
                     options?.height !== undefined,
+                    "김민규",
                     "rect 오브젝트 생성시 height를 반드시 option에 기입해주세요.",
                 )
                 return new fabric.Rect({
@@ -242,7 +188,7 @@ export abstract class SeatMapObject extends WithObjectId(fabric.Group) implement
                 return new fabric.Text(text, {
                     fill: "#000000",
                     fontFamily: "Helvetica",
-                    fontSize: SeatMapObject.DEAULT_LABEL_FONT_SIZE,
+                    fontSize: LabeldSeatMapObject.DEAULT_LABEL_FONT_SIZE,
                     fontWeight: "400",
                     originX: 'center',
                     originY: 'center',
@@ -251,53 +197,8 @@ export abstract class SeatMapObject extends WithObjectId(fabric.Group) implement
                 });
             // ------------------------------------------------------------------
             default:
-                Assert.Never(`지원하지 않는 Shape입니다: ${shapeType}`);
+                Assert.Never("김민규",`지원하지 않는 Shape입니다: ${shapeType}`);
                 return {} as never;
         }
     }
-}
-
-export abstract class EditableSeatMapObject extends SeatMapObject implements FabricToObjectMethodOverride, EditableStateExtractable {
-    // ----------------------------------------------------------------
-    // # FabricToObjectMethodOverride
-    public override toObject(propertiesToInclude?: string[] | undefined): any {
-        propertiesToInclude?.push("seatMapObjectProperty");
-        return super.toObject(propertiesToInclude); // this already includes inner fabric shape type + text
-    }
-
-    // toObject로 추출한 객체를 다시 Fabric 객체로 복구할 때, obj["seatMapObjectProperty"] 로 해당 좌석 데이터를 얻어낸다.
-    public abstract get seatMapObjectProperty(): any;
-
-    // -------------------------------------------------------
-    // # EditingStateExtractable
-    public abstract extractEditableState(): any;
-
-    // -------------------------------------------------------
-    constructor(
-        seatMapObjectType: SeatMapObjectType,
-        innerShape: FabricObjectType,
-        options?: {
-            innerShapeOptions?: IObjectOptions,
-            innerTextOptions?: ITextOptions
-            groupOptions?: IGroupOptions,
-            controlVisibilityOptions?: {
-                bl?: boolean | undefined;
-                br?: boolean | undefined;
-                mb?: boolean | undefined;
-                ml?: boolean | undefined;
-                mr?: boolean | undefined;
-                mt?: boolean | undefined;
-                tl?: boolean | undefined;
-                tr?: boolean | undefined;
-                mtr?: boolean | undefined;
-            }
-        }
-    ) {
-        super(seatMapObjectType, innerShape, options);
-    }
-}
-
-// Seat, Sector, etc...
-export abstract class ExportableSeatMapObject extends EditableSeatMapObject implements SeatMapExportable {
-    public abstract exportAsSeatMapFormat(adjustment?: PositionAdjustment): any; 
 }
