@@ -20,6 +20,7 @@ import { Venue } from "@/types/venue.type";
 import { Seat } from "@/types/seat.type";
 import { LabeldSeatMapObject } from "@/types/LabeldSeatMapObject.type";
 import { EditableSeatMapObject } from "@/types/EditableSeatMapObject.type";
+import { EditingPanelV2 } from "./property_panel/PropertyPanelV2";
 
 // 추가적으로, https://github.com/fkhadra/react-contexify 이 라이브러리 써서 Custum Context Menu 구현합시다.
 // 아니면 https://github.com/anandsimmy/custom-context-menu/blob/main/src/MyCusomtContextMenu.js#L4 이 코드 참고해서 직접 해도 되고..
@@ -773,6 +774,12 @@ function Editor(): ReactElement {
                             className=" pointer-events-none absolute top-0 left-0 right-0 z-0"
                         />
                     </div>
+
+                    {/* <EditingPanelV2
+                        canvasRef={fabricCanvasRef}
+                        keyboardEventDisableRef={keyboardEventDisableRef}
+                    /> */}
+
                     <PropertyPanel
                         keyboardEventDisableRef={keyboardEventDisableRef}
                         editingElementUiAttributes={editingElementUiAttributes}

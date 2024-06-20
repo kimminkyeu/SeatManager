@@ -88,6 +88,7 @@ export abstract class LabeldSeatMapObject extends WithObjectId(fabric.Group) imp
                 innerShapeType,
                 options?.innerShapeOptions
             );
+            console.log(this._innerShape);
             this.addWithUpdate(this._innerShape);
         };
         if (options?.innerTextOptions) {
@@ -110,7 +111,6 @@ export abstract class LabeldSeatMapObject extends WithObjectId(fabric.Group) imp
     public get innerShapeType(): FabricObjectType { 
         if (this._innerShape) {
             Assert.NonNull(this._innerShape.type,"김민규");
-            Assert.True(this._innerShape.type in FabricObjectTypeConstants,"김민규");
             return this._innerShape.type as FabricObjectType; // WARN!
         }
         return FabricObjectTypeConstants.UNDEFINED;
@@ -152,7 +152,6 @@ export abstract class LabeldSeatMapObject extends WithObjectId(fabric.Group) imp
                     "김민규",
                     "circle 오브젝트 생성시 radius를 반드시 option에 기입해주세요.",
                 )
-                console.log(options);
                 return new fabric.Circle({
                     fill: "#000000",
                     originX: 'center',

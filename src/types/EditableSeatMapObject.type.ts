@@ -13,7 +13,11 @@ export interface FabricToObjectMethodOverride {
     get seatMapObjectType(): any;
 }
 
-
+export type EditingState_V2 = Array<{
+    label: string
+    getValue: () => any, 
+    setValue: (value: any) => void, 
+}>;
 
 export interface EditingStateExtractable {
     /**
@@ -22,6 +26,9 @@ export interface EditingStateExtractable {
     * UI와 연동할 수 있는 State 값을 생성할 수 있도록 하는 Interface method입니다.
     */
     extractEditingState(): EditingAttribute;
+
+    // TEST
+    extractEditingState_V2(): EditingState_V2;
 }
 
 export abstract class EditableSeatMapObject extends LabeldSeatMapObject implements FabricToObjectMethodOverride, EditingStateExtractable {
@@ -38,6 +45,8 @@ export abstract class EditableSeatMapObject extends LabeldSeatMapObject implemen
     // -------------------------------------------------------
     // # EditingStateExtractable
     public abstract extractEditingState(): any;
+
+    public extractEditingState_V2(): EditingState_V2 { return []; };
 
     // -------------------------------------------------------
     constructor(

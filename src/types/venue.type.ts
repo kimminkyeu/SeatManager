@@ -112,6 +112,8 @@ export class Venue extends EditableSeatMapObject {
                     left: options?.left,
                     top: options?.top,
                     lockRotation: true,
+                    lockScalingX: false,
+                    lockScalingY: false,
                     opacity: 0.8,
                     originX: 'left',
                     originY: 'top',

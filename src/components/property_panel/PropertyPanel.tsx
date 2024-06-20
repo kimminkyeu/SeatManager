@@ -16,6 +16,7 @@ import VenueData from "./properties/VenueData";
 import { Venue, VenueEditingAttributes } from "@/types/venue.type";
 import { createHtmlView_MimicFrontend, createSeatMapV1, renderTags_MimicServer, saveStringToLocalDisk, setSeatmapPreviewPageEvent_v2 } from "@/lib/export";
 import { Assert } from "@/lib/assert";
+import { EditingPanelV2 } from "./PropertyPanelV2";
 
 
 export type RightSidebarProps = {
@@ -198,8 +199,6 @@ const PropertyPanel = ({
           createJsonFromCanvas={createCompressedJsonObjectFromCanvas} 
           label="서버로 제출하기 V2(압축)"
         /> */}
-
-
       </section>
     ),
     [editingElementUiAttributes]

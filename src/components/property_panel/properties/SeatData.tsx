@@ -52,9 +52,7 @@ const SeatData = ({
             </Label>
             <Input
               className='input-ring'
-              // disabled={ (item.property === SEAT_ID_KEY) } // id는 편집 불가능.
               type={
-                // (item.property === SEAT_ID_KEY) ? ('text') : ('number')
                   ('number')
               }
               id={item.property}

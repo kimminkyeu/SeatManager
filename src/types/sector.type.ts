@@ -10,7 +10,7 @@ import { FabricObjectType, FabricObjectTypeConstants, SeatMapObjectTypeConstants
 import { PositionAdjustment, ExportableSeatMapObject } from "./ExportableSeatMapObject.type";
 import { cloneDeep } from "lodash";
 import { SeatExport, SeatMappingData, SectorExport } from "./export.type";
-import { EditingStateExtractable } from "./EditableSeatMapObject.type";
+import { EditableSeatMapObject, EditingStateExtractable, EditingState_V2 } from "./EditableSeatMapObject.type";
 import { SeatMapObjectOptions } from "./LabeldSeatMapObject.type";
 
 // Omit : https://stackoverflow.com/questions/48215950/exclude-property-from-type
@@ -97,6 +97,24 @@ export class Sector extends ExportableSeatMapObject {
         sectorAttribute.sectorGapY = this._gapY ?? 0;
         sectorAttribute.fill = this.fill;
         return sectorAttribute;
+    }
+
+    public setSectorId(this: Sector, id: string){
+        this.sectorId = id;
+    }
+
+    public getSectorId() {
+        return this.sectorId;
+    }
+
+    public override extractEditingState_V2(): EditingState_V2 {
+        return [
+            { 
+                label: '구역명', 
+                setValue: this.setSectorId.bind(this), 
+                getValue: this.getSectorId.bind(this),
+            }
+        ]
     }
 
     // for ( toObject() data --> new instance  )
@@ -207,20 +225,6 @@ export class Sector extends ExportableSeatMapObject {
                     left: options?.left,
                     top: options?.top,
                 },
-                // innerShapeOptions: {
-                //     width: options?.width,
-                //     height: options?.height,
-                //     strokeWidth: 1,
-                //     stroke: options?.fill ?? `#000000`,
-                //     originX: 'left',
-                //     originY: 'top',
-                //     fill: `rgba(0,0,0,0)`, // default fill is transparent color
-                // },
-                // innerTextOptions: {
-                //     text: `Sector: ${sectorId}`,
-                //     originX: 'left',
-                //     originY: 'top',
-                // },
                 controlVisibilityOptions: {
                     mtr: true, // show rotation
                     mt: false,
@@ -346,34 +350,14 @@ export class Sector extends ExportableSeatMapObject {
     private _collectDataFromEachSeat(
         collector: (seat: Seat) => void, // for html tag
     ) {
-
-        // (1) 이 경우는 편집모드를 거친 Sector.
-        // if (true === this._isEditedSector()) {
-            const raw = cloneDeep(this)
-            const dest = raw.destroy() as Sector;
-            dest.getSeats().forEach((obj: fabric.Object) => {
-                if (SeatMapObjectTypeConstants.SEAT === SeatMapUtil.getType(obj)) {
-                    Assert.True(obj instanceof Seat, "김민규");
-                    collector(obj as Seat);
-                }
-            });
-            return;
-        // }
-
-        // (1) 이 경우는 편집모드를 거치지 않은 Sector
-        // const raw2: Sector = (this.constructNewCopy());
-        // raw2.setOptions({
-        //     left: raw2.left! - raw2.width! / 2,
-        //     top: raw2.top! - raw2.height! / 2,
-        // });
-
-        // const destroyed = raw2.destroy();
-        // (destroyed as Sector).getSeats().forEach((obj: fabric.Object) => {
-        //     if (SeatMapObjectTypeConstants.SEAT === SeatMapUtil.getType(obj)) {
-        //         Assert.True(obj instanceof Seat);
-        //         collector(obj as Seat);
-        //     }
-        // });
-        // return;
+        const raw = cloneDeep(this)
+        const dest = raw.destroy() as Sector;
+        dest.getSeats().forEach((obj: fabric.Object) => {
+            if (SeatMapObjectTypeConstants.SEAT === SeatMapUtil.getType(obj)) {
+                Assert.True(obj instanceof Seat, "김민규");
+                collector(obj as Seat);
+            }
+        });
+        return;
     }
 }
